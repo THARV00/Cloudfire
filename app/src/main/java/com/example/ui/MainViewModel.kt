@@ -86,7 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             flowOf(emptyList())
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val filteredFiles: StateFlow<List<CloudFile>> = combine(
         rawFiles,
@@ -98,7 +98,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val matchesCategory = category == FileCategory.ALL || file.category == category
             matchesQuery && matchesCategory
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val storageUsedBytes: StateFlow<Long> = currentUser.flatMapLatest { user ->
@@ -109,7 +109,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.combine(flowOf(0L)) { used, _ ->
         used ?: 0L
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
 
     init {
         // Start embedded HTTP server for instant Chrome downloads

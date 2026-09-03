@@ -139,37 +139,49 @@ class FileRepository(
     }
 
     /**
-     * Seeds initial helpful starter files so the user immediately has files to test Chrome download
+     * Ensures all files saved in the app are restored and shown after login,
+     * seeds initial files if user has no files yet.
      */
     suspend fun seedStarterFilesIfNeeded(userId: String) = withContext(Dispatchers.IO) {
         try {
-            val starterDir = File(context.filesDir, "uploads/starter_doc")
-            if (!starterDir.exists()) starterDir.mkdirs()
+            // 1. Claim any orphaned or guest files so they belong to this logged in user
+            fileDao.claimOrphanedFiles(userId)
 
-            val starterFile = File(starterDir, "Welcome_to_CloudFire_Guide.txt")
-            if (!starterFile.exists()) {
-                starterFile.writeText(
-                    """
-                    ==============================================
-                    🔥 Welcome to CloudFire - Fast Cloud Sharing! 🔥
-                    ==============================================
-                    
-                    Inspired by MediaFire, CloudFire allows you to:
-                    1. Upload ANY file format: APK, ZIP, PDF, Video, MP3, ISO, and more.
-                    2. Instantly generate direct download links.
-                    3. Paste the link directly in Google Chrome browser.
-                    4. Chrome will AUTOMATICALLY trigger the file download!
-                    
-                    Free Storage Limit: 10 GB
-                    Download Speed: Unlimited
-                    Server: Local CloudFire Engine
-                    
-                    Thank you for using CloudFire!
-                    """.trimIndent()
-                )
+            // 2. Discover and recover any saved files in the internal storage directory
+            syncDiskFilesWithDatabase(userId)
 
-                val fileEntity = CloudFile(
-                    id = "starter_doc",
+            // 3. Check if user already has files in their drive
+            val userFileCount = fileDao.getFileCount(userId)
+            if (userFileCount == 0) {
+                // Seed starter files
+                val starterDir = File(context.filesDir, "uploads/starter_doc")
+                if (!starterDir.exists()) starterDir.mkdirs()
+
+                val starterFile = File(starterDir, "Welcome_to_CloudFire_Guide.txt")
+                if (!starterFile.exists()) {
+                    starterFile.writeText(
+                        """
+                        ==============================================
+                        🔥 Welcome to CloudFire - Fast Cloud Sharing! 🔥
+                        ==============================================
+                        
+                        Inspired by MediaFire, CloudFire allows you to:
+                        1. Upload ANY file format: APK, ZIP, PDF, Video, MP3, ISO, and more.
+                        2. Instantly generate direct download links.
+                        3. Paste the link directly in Google Chrome browser.
+                        4. Chrome will AUTOMATICALLY trigger the file download!
+                        
+                        Free Storage Limit: 10 GB
+                        Download Speed: Unlimited
+                        Server: Local CloudFire Engine
+                        
+                        Thank you for using CloudFire!
+                        """.trimIndent()
+                    )
+                }
+
+                val docEntity = CloudFile(
+                    id = "starter_doc_$userId",
                     fileName = "Welcome_to_CloudFire_Guide.txt",
                     fileSize = starterFile.length(),
                     mimeType = "text/plain",
@@ -180,22 +192,21 @@ class FileRepository(
                     userId = userId,
                     isFavorite = true
                 )
-                fileDao.insertFile(fileEntity)
-            }
+                fileDao.insertFile(docEntity)
 
-            // Also seed a sample archive file
-            val zipDir = File(context.filesDir, "uploads/starter_pack")
-            if (!zipDir.exists()) zipDir.mkdirs()
+                // Also seed demo zip package
+                val zipDir = File(context.filesDir, "uploads/starter_pack")
+                if (!zipDir.exists()) zipDir.mkdirs()
 
-            val zipFile = File(zipDir, "CloudFire_Demo_Pack.zip")
-            if (!zipFile.exists()) {
-                zipFile.writeBytes(
-                    // Simple sample zip header payload
-                    byteArrayOf(0x50, 0x4B, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-                )
+                val zipFile = File(zipDir, "CloudFire_Demo_Pack.zip")
+                if (!zipFile.exists()) {
+                    zipFile.writeBytes(
+                        byteArrayOf(0x50, 0x4B, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                    )
+                }
 
                 val zipEntity = CloudFile(
-                    id = "starter_pack",
+                    id = "starter_pack_$userId",
                     fileName = "CloudFire_Demo_Pack.zip",
                     fileSize = 1048576L * 4 + 250000L, // 4.2 MB simulated zip
                     mimeType = "application/zip",
@@ -210,6 +221,45 @@ class FileRepository(
             }
         } catch (e: Exception) {
             Log.e("FileRepository", "Error seeding files", e)
+        }
+    }
+
+    /**
+     * Scans internal uploads directory and restores any files to the database
+     * so files saved in the app are never lost and always show after login.
+     */
+    private suspend fun syncDiskFilesWithDatabase(userId: String) {
+        val uploadsDir = File(context.filesDir, "uploads")
+        if (!uploadsDir.exists() || !uploadsDir.isDirectory) return
+
+        val folderList = uploadsDir.listFiles() ?: return
+        for (folder in folderList) {
+            if (folder.isDirectory) {
+                val files = folder.listFiles() ?: continue
+                for (file in files) {
+                    if (file.isFile && file.length() > 0) {
+                        val fileId = folder.name
+                        val existing = fileDao.getFileById(fileId)
+                        if (existing == null) {
+                            val ext = if (file.name.contains(".")) file.name.substringAfterLast(".") else ""
+                            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
+                            val recoveredFile = CloudFile(
+                                id = fileId,
+                                fileName = file.name,
+                                fileSize = file.length(),
+                                mimeType = mimeType,
+                                extension = ext,
+                                localFilePath = file.absolutePath,
+                                uploadTimestamp = file.lastModified(),
+                                downloadCount = 0,
+                                userId = userId,
+                                isFavorite = false
+                            )
+                            fileDao.insertFile(recoveredFile)
+                        }
+                    }
+                }
+            }
         }
     }
 

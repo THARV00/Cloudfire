@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CloudFileDao {
-    @Query("SELECT * FROM cloud_files WHERE userId = :userId ORDER BY uploadTimestamp DESC")
+    @Query("SELECT * FROM cloud_files WHERE userId = :userId OR userId = 'guest_user' OR userId = 'default_user' OR userId = '' ORDER BY uploadTimestamp DESC")
     fun getAllFiles(userId: String): Flow<List<CloudFile>>
 
-    @Query("SELECT * FROM cloud_files WHERE userId = :userId AND fileName LIKE '%' || :query || '%' ORDER BY uploadTimestamp DESC")
+    @Query("SELECT * FROM cloud_files WHERE (userId = :userId OR userId = 'guest_user' OR userId = 'default_user' OR userId = '') AND fileName LIKE '%' || :query || '%' ORDER BY uploadTimestamp DESC")
     fun searchFiles(userId: String, query: String): Flow<List<CloudFile>>
 
     @Query("SELECT * FROM cloud_files WHERE id = :id LIMIT 1")
@@ -33,8 +33,17 @@ interface CloudFileDao {
     @Query("UPDATE cloud_files SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun updateFavorite(id: String, isFavorite: Boolean)
 
-    @Query("SELECT SUM(fileSize) FROM cloud_files WHERE userId = :userId")
+    @Query("SELECT SUM(fileSize) FROM cloud_files WHERE userId = :userId OR userId = 'guest_user' OR userId = 'default_user' OR userId = ''")
     fun getTotalStorageUsed(userId: String): Flow<Long?>
+
+    @Query("SELECT COUNT(*) FROM cloud_files WHERE userId = :userId")
+    suspend fun getFileCount(userId: String): Int
+
+    @Query("UPDATE cloud_files SET userId = :userId WHERE userId = 'guest_user' OR userId = 'default_user' OR userId = '' OR userId LIKE 'guest_%'")
+    suspend fun claimOrphanedFiles(userId: String)
+
+    @Query("SELECT * FROM cloud_files ORDER BY uploadTimestamp DESC")
+    suspend fun getAllFilesList(): List<CloudFile>
 
     @Query("DELETE FROM cloud_files WHERE userId = :userId")
     suspend fun deleteAllUserFiles(userId: String)

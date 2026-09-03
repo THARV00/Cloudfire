@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 data class UserProfile(
     val uid: String,
@@ -22,6 +23,19 @@ class AuthRepository(private val context: Context) {
     companion object {
         const val DEVELOPER_EMAIL = "devlopertharv@gmail.com"
         const val DEVELOPER_PASSWORD = "tharvthala07"
+        private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_SAVED_UID = "saved_uid"
+        private const val KEY_SAVED_EMAIL = "saved_email"
+        private const val KEY_SAVED_NAME = "saved_name"
+        private const val KEY_SAVED_IS_DEV = "saved_is_developer"
+
+        fun normalizeUid(email: String): String {
+            val cleanEmail = email.trim().lowercase(Locale.ROOT)
+            if (cleanEmail == DEVELOPER_EMAIL.lowercase(Locale.ROOT)) {
+                return "dev_tharv_07"
+            }
+            return "user_" + cleanEmail.replace("[^a-z0-9]".toRegex(), "_")
+        }
     }
 
     private val prefs: SharedPreferences =
@@ -39,26 +53,42 @@ class AuthRepository(private val context: Context) {
             Log.w("AuthRepository", "Firebase not initialized or missing config, fallback to local auth", e)
         }
 
-        // Restore saved session
-        val savedUid = prefs.getString("saved_uid", null)
-        val savedEmail = prefs.getString("saved_email", null)
-        val savedName = prefs.getString("saved_name", null)
-        val savedIsDev = prefs.getBoolean("saved_is_developer", false) || savedEmail?.equals(DEVELOPER_EMAIL, ignoreCase = true) == true
+        // Restore saved session permanently across app launches
+        val isLoggedIn = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        val savedEmail = prefs.getString(KEY_SAVED_EMAIL, null)
+        val savedUid = prefs.getString(KEY_SAVED_UID, null)
+        val savedName = prefs.getString(KEY_SAVED_NAME, null)
 
-        if (savedUid != null && savedEmail != null) {
+        if ((isLoggedIn || savedEmail != null) && !savedEmail.isNullOrBlank()) {
+            val isDev = prefs.getBoolean(KEY_SAVED_IS_DEV, false) ||
+                    savedEmail.equals(DEVELOPER_EMAIL, ignoreCase = true)
+            val uid = savedUid?.ifBlank { null } ?: normalizeUid(savedEmail)
             _currentUser.value = UserProfile(
-                uid = savedUid,
+                uid = uid,
                 email = savedEmail,
-                displayName = savedName ?: savedEmail.substringBefore("@"),
-                storageLimitBytes = if (savedIsDev) Long.MAX_VALUE else 10L * 1024 * 1024 * 1024,
-                isDeveloper = savedIsDev
+                displayName = savedName?.ifBlank { null } ?: savedEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
+                storageLimitBytes = if (isDev) Long.MAX_VALUE else 10L * 1024 * 1024 * 1024,
+                isDeveloper = isDev
             )
+        } else {
+            // Check if Firebase Auth has an active cached user
+            val fbUser = firebaseAuth?.currentUser
+            if (fbUser != null && fbUser.email != null) {
+                val profile = UserProfile(
+                    uid = normalizeUid(fbUser.email!!),
+                    email = fbUser.email!!,
+                    displayName = fbUser.displayName ?: fbUser.email!!.substringBefore("@").replaceFirstChar { it.uppercase() }
+                )
+                saveSession(profile)
+                _currentUser.value = profile
+            }
         }
     }
 
     suspend fun signIn(email: String, password: String): Result<UserProfile> {
         val trimmedEmail = email.trim()
         val trimmedPass = password.trim()
+        val cleanEmail = trimmedEmail.lowercase(Locale.ROOT)
 
         if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
             return Result.failure(IllegalArgumentException("Please enter a valid email address."))
@@ -68,7 +98,7 @@ class AuthRepository(private val context: Context) {
         }
 
         // Developer Superuser Account
-        if (trimmedEmail.equals(DEVELOPER_EMAIL, ignoreCase = true)) {
+        if (cleanEmail == DEVELOPER_EMAIL.lowercase(Locale.ROOT)) {
             if (trimmedPass == DEVELOPER_PASSWORD) {
                 val devProfile = UserProfile(
                     uid = "dev_tharv_07",
@@ -85,6 +115,13 @@ class AuthRepository(private val context: Context) {
             }
         }
 
+        // Check local registered credentials
+        val savedPass = prefs.getString("pwd_$cleanEmail", null)
+        val savedName = prefs.getString("name_$cleanEmail", null)
+        if (savedPass != null && savedPass != trimmedPass) {
+            return Result.failure(IllegalArgumentException("Incorrect password. Please try again."))
+        }
+
         // Try Firebase Auth if available
         val fbAuth = firebaseAuth
         if (fbAuth != null) {
@@ -93,26 +130,34 @@ class AuthRepository(private val context: Context) {
                 val user = authResult.user
                 if (user != null) {
                     val profile = UserProfile(
-                        uid = user.uid,
+                        uid = normalizeUid(user.email ?: trimmedEmail),
                         email = user.email ?: trimmedEmail,
-                        displayName = user.displayName ?: trimmedEmail.substringBefore("@")
+                        displayName = savedName ?: user.displayName ?: trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
                     )
                     saveSession(profile)
                     _currentUser.value = profile
                     return Result.success(profile)
                 }
             } catch (e: Exception) {
-                Log.d("AuthRepository", "Firebase signIn failed or unconfigured, using account credentials: ${e.message}")
+                Log.d("AuthRepository", "Firebase signIn fallback: ${e.message}")
             }
         }
 
-        // Standard direct sign in session
-        val uid = "user_${trimmedEmail.replace("[^a-zA-Z0-9]".toRegex(), "")}"
+        // Standard direct sign in session with deterministic UID
+        val uid = normalizeUid(trimmedEmail)
+        val displayName = savedName ?: trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
         val profile = UserProfile(
             uid = uid,
             email = trimmedEmail,
-            displayName = trimmedEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+            displayName = displayName
         )
+
+        // Store account locally so user can always log in
+        prefs.edit()
+            .putString("pwd_$cleanEmail", trimmedPass)
+            .putString("name_$cleanEmail", displayName)
+            .apply()
+
         saveSession(profile)
         _currentUser.value = profile
         return Result.success(profile)
@@ -122,6 +167,7 @@ class AuthRepository(private val context: Context) {
         val trimmedName = name.trim().ifEmpty { "CloudFire User" }
         val trimmedEmail = email.trim()
         val trimmedPass = password.trim()
+        val cleanEmail = trimmedEmail.lowercase(Locale.ROOT)
 
         if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
             return Result.failure(IllegalArgumentException("Please enter a valid email address."))
@@ -131,7 +177,7 @@ class AuthRepository(private val context: Context) {
         }
 
         // Developer Superuser Account check
-        if (trimmedEmail.equals(DEVELOPER_EMAIL, ignoreCase = true)) {
+        if (cleanEmail == DEVELOPER_EMAIL.lowercase(Locale.ROOT)) {
             if (trimmedPass == DEVELOPER_PASSWORD) {
                 val devProfile = UserProfile(
                     uid = "dev_tharv_07",
@@ -155,25 +201,36 @@ class AuthRepository(private val context: Context) {
                 val user = authResult.user
                 if (user != null) {
                     val profile = UserProfile(
-                        uid = user.uid,
+                        uid = normalizeUid(user.email ?: trimmedEmail),
                         email = user.email ?: trimmedEmail,
                         displayName = trimmedName
                     )
+                    prefs.edit()
+                        .putString("pwd_$cleanEmail", trimmedPass)
+                        .putString("name_$cleanEmail", trimmedName)
+                        .apply()
                     saveSession(profile)
                     _currentUser.value = profile
                     return Result.success(profile)
                 }
             } catch (e: Exception) {
-                Log.d("AuthRepository", "Firebase signUp error: ${e.message}")
+                Log.d("AuthRepository", "Firebase signUp fallback: ${e.message}")
             }
         }
 
-        val uid = "user_${System.currentTimeMillis()}"
+        val uid = normalizeUid(trimmedEmail)
         val profile = UserProfile(
             uid = uid,
             email = trimmedEmail,
             displayName = trimmedName
         )
+
+        // Store account locally
+        prefs.edit()
+            .putString("pwd_$cleanEmail", trimmedPass)
+            .putString("name_$cleanEmail", trimmedName)
+            .apply()
+
         saveSession(profile)
         _currentUser.value = profile
         return Result.success(profile)
@@ -195,9 +252,9 @@ class AuthRepository(private val context: Context) {
 
     fun signInAsGuest(): UserProfile {
         val profile = UserProfile(
-            uid = "guest_${System.currentTimeMillis().toString().takeLast(6)}",
+            uid = "guest_user",
             email = "guest@cloudfire.io",
-            displayName = "Demo User",
+            displayName = "Guest User",
             isAnonymous = true
         )
         saveSession(profile)
@@ -209,16 +266,26 @@ class AuthRepository(private val context: Context) {
         try {
             firebaseAuth?.signOut()
         } catch (ignored: Exception) {}
-        prefs.edit().clear().apply()
+
+        // Clear active session keys while preserving registered credentials
+        prefs.edit()
+            .putBoolean(KEY_IS_LOGGED_IN, false)
+            .remove(KEY_SAVED_UID)
+            .remove(KEY_SAVED_EMAIL)
+            .remove(KEY_SAVED_NAME)
+            .remove(KEY_SAVED_IS_DEV)
+            .commit()
+
         _currentUser.value = null
     }
 
     private fun saveSession(profile: UserProfile) {
         prefs.edit()
-            .putString("saved_uid", profile.uid)
-            .putString("saved_email", profile.email)
-            .putString("saved_name", profile.displayName)
-            .putBoolean("saved_is_developer", profile.isDeveloper)
-            .apply()
+            .putBoolean(KEY_IS_LOGGED_IN, true)
+            .putString(KEY_SAVED_UID, profile.uid)
+            .putString(KEY_SAVED_EMAIL, profile.email)
+            .putString(KEY_SAVED_NAME, profile.displayName)
+            .putBoolean(KEY_SAVED_IS_DEV, profile.isDeveloper)
+            .commit() // Commit synchronously to ensure it persists immediately to disk
     }
 }
