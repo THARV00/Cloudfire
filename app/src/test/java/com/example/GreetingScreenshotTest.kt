@@ -26,8 +26,7 @@ class GreetingScreenshotTest {
       MyApplicationTheme {
         AuthScreen(
           onSignIn = { _, _, _ -> },
-          onSignUp = { _, _, _, _ -> },
-          onGuestSignIn = {}
+          onSignUp = { _, _, _, _ -> }
         )
       }
     }

@@ -96,9 +96,7 @@ fun CloudFireApp(viewModel: MainViewModel) {
                 } else {
                     AuthScreen(
                         onSignIn = viewModel::signIn,
-                        onSignUp = viewModel::signUp,
-                        onGuestSignIn = viewModel::signInAsGuest,
-                        onDeveloperSignIn = viewModel::signInAsDeveloper
+                        onSignUp = viewModel::signUp
                     )
                 }
             }

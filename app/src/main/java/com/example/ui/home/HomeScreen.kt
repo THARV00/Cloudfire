@@ -442,23 +442,19 @@ fun HomeScreen(
                 }
             }
 
-            // Developer attribution in corner (clickable for developer)
+            // Developer attribution in corner
             Surface(
-                color = if (user.isDeveloper) Color(0xFF1E1B4B) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                 shape = RoundedCornerShape(topStart = 8.dp),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .clip(RoundedCornerShape(topStart = 8.dp))
-                    .clickable {
-                        if (user.isDeveloper) onOpenDeveloperConsole()
-                    }
                     .testTag("tag_home_developer_credit")
             ) {
                 Text(
-                    text = if (user.isDeveloper) "👑 devloper :- Tharv (Tap for Dev Tools)" else "devloper :- Tharv",
+                    text = "devloper :- Tharv",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (user.isDeveloper) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }

@@ -81,7 +81,7 @@ class AuthRepository(private val context: Context) {
                 _currentUser.value = devProfile
                 return Result.success(devProfile)
             } else {
-                return Result.failure(IllegalArgumentException("Incorrect developer password. Please use valid developer credentials."))
+                return Result.failure(IllegalArgumentException("Incorrect password. Please try again."))
             }
         }
 
@@ -144,7 +144,7 @@ class AuthRepository(private val context: Context) {
                 _currentUser.value = devProfile
                 return Result.success(devProfile)
             } else {
-                return Result.failure(IllegalArgumentException("Developer account ($DEVELOPER_EMAIL) requires password $DEVELOPER_PASSWORD."))
+                return Result.failure(IllegalArgumentException("This email address is already registered. Please sign in."))
             }
         }
 
