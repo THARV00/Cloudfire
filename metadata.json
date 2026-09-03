@@ -1,0 +1,6 @@
+{
+  "name": "CloudFire",
+  "description": "Fast cloud file sharing and direct browser download app inspired by MediaFire with user authentication, instant file upload, and automated Chrome download links.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
