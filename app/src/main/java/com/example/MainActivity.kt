@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
 import com.example.ui.auth.AuthScreen
 import com.example.ui.home.ChromeDownloadDialog
+import com.example.ui.home.DeveloperConsoleDialog
 import com.example.ui.home.FileDetailsSheet
 import com.example.ui.home.HomeScreen
 import com.example.ui.home.UploadDialog
@@ -51,6 +52,7 @@ fun CloudFireApp(viewModel: MainViewModel) {
     val serverInfo by viewModel.serverInfo.collectAsStateWithLifecycle()
     val activeFileAction by viewModel.activeFileAction.collectAsStateWithLifecycle()
     val activeChromeLinkFile by viewModel.activeChromeLinkFile.collectAsStateWithLifecycle()
+    val showDeveloperConsole by viewModel.showDeveloperConsole.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -88,13 +90,15 @@ fun CloudFireApp(viewModel: MainViewModel) {
                         onQuickChromeLink = viewModel::openChromeLinkDialog,
                         onToggleFavorite = viewModel::toggleFavorite,
                         onDeleteFile = viewModel::deleteFile,
-                        onSignOut = viewModel::signOut
+                        onSignOut = viewModel::signOut,
+                        onOpenDeveloperConsole = viewModel::openDeveloperConsole
                     )
                 } else {
                     AuthScreen(
                         onSignIn = viewModel::signIn,
                         onSignUp = viewModel::signUp,
-                        onGuestSignIn = viewModel::signInAsGuest
+                        onGuestSignIn = viewModel::signInAsGuest,
+                        onDeveloperSignIn = viewModel::signInAsDeveloper
                     )
                 }
             }
@@ -123,6 +127,17 @@ fun CloudFireApp(viewModel: MainViewModel) {
                     file = file,
                     directDownloadUrl = viewModel.getDirectDownloadUrl(file.id),
                     onDismiss = viewModel::closeChromeLinkDialog
+                )
+            }
+
+            // Developer Superuser Console Dialog (devlopertharv@gmail.com / tharvthala07)
+            if (showDeveloperConsole) {
+                DeveloperConsoleDialog(
+                    user = currentUser,
+                    onDismiss = viewModel::closeDeveloperConsole,
+                    onCreateTestFile = viewModel::createDeveloperTestFile,
+                    onDeleteAllFiles = viewModel::deleteAllFiles,
+                    onSeedStarterFiles = viewModel::seedStarterFiles
                 )
             }
         }

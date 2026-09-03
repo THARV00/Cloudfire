@@ -43,6 +43,9 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -110,7 +113,8 @@ fun HomeScreen(
     onQuickChromeLink: (CloudFile) -> Unit,
     onToggleFavorite: (CloudFile) -> Unit,
     onDeleteFile: (CloudFile) -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onOpenDeveloperConsole: () -> Unit = {}
 ) {
     var showUserMenu by remember { mutableStateOf(false) }
 
@@ -158,6 +162,33 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    // Developer Mode Superuser pill
+                    if (user.isDeveloper) {
+                        Surface(
+                            color = Color(0xFF1E1B4B),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onOpenDeveloperConsole() }
+                                .testTag("btn_top_dev_console")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("👑", fontSize = 12.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "THARV DEV",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFD700)
+                                )
+                            }
+                        }
+                    }
+
                     // Server live pulse badge
                     Surface(
                         color = Color(0xFFE8F5E9),
@@ -194,14 +225,14 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(CloudFireBlue),
+                                    .background(if (user.isDeveloper) Color(0xFF1E1B4B) else CloudFireBlue),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = user.displayName.take(1).uppercase(),
+                                    text = if (user.isDeveloper) "👑" else user.displayName.take(1).uppercase(),
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                                    fontSize = if (user.isDeveloper) 16.sp else 15.sp
                                 )
                             }
                         }
@@ -222,11 +253,39 @@ fun HomeScreen(
                                     color = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Tier: MediaFire 10 GB Free",
-                                    fontSize = 11.sp,
-                                    color = CloudFireBlue,
-                                    fontWeight = FontWeight.SemiBold
+                                if (user.isDeveloper) {
+                                    Text(
+                                        text = "Role: Superuser / Developer",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF4F46E5),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Tier: Unlimited Storage",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Tier: MediaFire 10 GB Free",
+                                        fontSize = 11.sp,
+                                        color = CloudFireBlue,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                            if (user.isDeveloper) {
+                                DropdownMenuItem(
+                                    text = { Text("Developer Console", fontWeight = FontWeight.Bold) },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Terminal, contentDescription = null, tint = Color(0xFF4F46E5))
+                                    },
+                                    onClick = {
+                                        showUserMenu = false
+                                        onOpenDeveloperConsole()
+                                    },
+                                    modifier = Modifier.testTag("menu_dev_console")
                                 )
                             }
                             DropdownMenuItem(
@@ -276,7 +335,9 @@ fun HomeScreen(
                 item {
                     StorageQuotaCard(
                         usedBytes = storageUsedBytes,
-                        limitBytes = user.storageLimitBytes
+                        limitBytes = user.storageLimitBytes,
+                        isDeveloper = user.isDeveloper,
+                        onOpenDeveloperConsole = onOpenDeveloperConsole
                     )
                 }
 
@@ -381,19 +442,23 @@ fun HomeScreen(
                 }
             }
 
-            // Developer attribution in corner
+            // Developer attribution in corner (clickable for developer)
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                color = if (user.isDeveloper) Color(0xFF1E1B4B) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                 shape = RoundedCornerShape(topStart = 8.dp),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
+                    .clip(RoundedCornerShape(topStart = 8.dp))
+                    .clickable {
+                        if (user.isDeveloper) onOpenDeveloperConsole()
+                    }
                     .testTag("tag_home_developer_credit")
             ) {
                 Text(
-                    text = "devloper :- Tharv",
+                    text = if (user.isDeveloper) "👑 devloper :- Tharv (Tap for Dev Tools)" else "devloper :- Tharv",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold,
+                    color = if (user.isDeveloper) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
@@ -402,8 +467,120 @@ fun HomeScreen(
 }
 
 @Composable
-fun StorageQuotaCard(usedBytes: Long, limitBytes: Long) {
+fun StorageQuotaCard(
+    usedBytes: Long,
+    limitBytes: Long,
+    isDeveloper: Boolean = false,
+    onOpenDeveloperConsole: () -> Unit = {}
+) {
     val usedMB = usedBytes.toDouble() / (1024.0 * 1024.0)
+
+    if (isDeveloper) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .testTag("card_developer_storage"),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFD700)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("👑", fontSize = 18.sp)
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Tharv Developer Quota",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = Color(0xFF4F46E5),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "SUPERUSER",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 9.sp,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Unlimited Storage • Zero Restrictions Active",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onOpenDeveloperConsole,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.testTag("btn_dev_tools_quota_card")
+                    ) {
+                        Icon(Icons.Default.Terminal, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Dev Tools", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                LinearProgressIndicator(
+                    progress = { 0.01f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = Color(0xFFFFD700),
+                    trackColor = Color.White.copy(alpha = 0.15f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = String.format(Locale.US, "%.1f MB active storage used", usedMB),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                    Text(
+                        text = "∞ Unlimited Storage",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFD700)
+                    )
+                }
+            }
+        }
+        return
+    }
+
     val limitGB = limitBytes.toDouble() / (1024.0 * 1024.0 * 1024.0)
     val progress = (usedBytes.toFloat() / limitBytes.toFloat()).coerceIn(0f, 1f)
 

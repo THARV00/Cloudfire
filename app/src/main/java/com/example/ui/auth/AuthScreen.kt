@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FlashOn
@@ -76,7 +77,8 @@ import com.example.ui.theme.CloudFireCyan
 fun AuthScreen(
     onSignIn: (String, String, (String) -> Unit) -> Unit,
     onSignUp: (String, String, String, (String) -> Unit) -> Unit,
-    onGuestSignIn: () -> Unit
+    onGuestSignIn: () -> Unit,
+    onDeveloperSignIn: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Sign In, 1 = Sign Up
     var name by remember { mutableStateOf("") }
@@ -426,6 +428,73 @@ fun AuthScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Developer Superuser Login (devlopertharv@gmail.com / tharvthala07)
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable {
+                                email = "devlopertharv@gmail.com"
+                                password = "tharvthala07"
+                                onDeveloperSignIn()
+                            }
+                            .testTag("btn_developer_quick_signin"),
+                        color = Color(0xFF1E1B4B),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFD700)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("👑", fontSize = 16.sp)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Developer Login (Tharv)",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = Color(0xFF4F46E5),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "SUPERUSER",
+                                            color = Color.White,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "devlopertharv@gmail.com • Unlimited Access",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFCBD5E1)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Sign in as developer",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -472,22 +541,32 @@ fun AuthScreen(
             }
         }
 
-        // Developer attribution in corner
+        // Developer attribution in corner (clickable for quick dev login)
         Surface(
-            color = Color.Black.copy(alpha = 0.45f),
+            color = Color.Black.copy(alpha = 0.65f),
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(12.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable {
+                    email = "devlopertharv@gmail.com"
+                    password = "tharvthala07"
+                    onDeveloperSignIn()
+                }
                 .testTag("tag_developer_credit")
         ) {
-            Text(
-                text = "devloper :- Tharv",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "👑 devloper :- Tharv",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFD700)
+                )
+            }
         }
     }
 }

@@ -212,4 +212,80 @@ class FileRepository(
             Log.e("FileRepository", "Error seeding files", e)
         }
     }
+
+    suspend fun deleteAllUserFiles(userId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            fileDao.deleteAllUserFiles(userId)
+            val uploadsDir = File(context.filesDir, "uploads")
+            if (uploadsDir.exists()) {
+                uploadsDir.listFiles()?.forEach { dir ->
+                    if (dir.isDirectory) {
+                        dir.deleteRecursively()
+                    }
+                }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FileRepository", "Error clearing files", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun renameFile(fileId: String, newName: String) = withContext(Dispatchers.IO) {
+        val extension = if (newName.contains(".")) newName.substringAfterLast(".", "") else ""
+        fileDao.updateFileName(fileId, newName, extension)
+    }
+
+    suspend fun setDownloadCount(fileId: String, count: Int) = withContext(Dispatchers.IO) {
+        fileDao.updateDownloadCount(fileId, count)
+    }
+
+    suspend fun createDeveloperFile(
+        userId: String,
+        fileName: String,
+        mimeType: String,
+        extension: String,
+        simulatedSize: Long,
+        textContent: String? = null
+    ): Result<CloudFile> = withContext(Dispatchers.IO) {
+        try {
+            val fileId = UUID.randomUUID().toString()
+            val dir = File(context.filesDir, "uploads/$fileId")
+            if (!dir.exists()) dir.mkdirs()
+
+            val targetFile = File(dir, fileName)
+            if (textContent != null) {
+                targetFile.writeText(textContent)
+            } else {
+                when (extension.lowercase()) {
+                    "apk" -> targetFile.writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x08, 0x00))
+                    "zip" -> targetFile.writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
+                    "pdf" -> targetFile.writeBytes("%PDF-1.4\n%Developer Tharv CloudFire Admin Document\n%%EOF".toByteArray())
+                    "mp4" -> targetFile.writeBytes(byteArrayOf(0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D))
+                    "mp3" -> targetFile.writeBytes(byteArrayOf(0x49, 0x44, 0x33, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+                    "iso" -> targetFile.writeBytes(byteArrayOf(0x43, 0x44, 0x30, 0x30, 0x31))
+                    else -> targetFile.writeText("CloudFire Developer Generated File: $fileName\nCreated by Tharv (Developer/Admin)")
+                }
+            }
+
+            val actualSize = targetFile.length().coerceAtLeast(simulatedSize)
+            val cloudFile = CloudFile(
+                id = fileId,
+                fileName = fileName,
+                fileSize = actualSize,
+                mimeType = mimeType,
+                extension = extension,
+                localFilePath = targetFile.absolutePath,
+                uploadTimestamp = System.currentTimeMillis(),
+                downloadCount = 0,
+                userId = userId,
+                isFavorite = false
+            )
+            fileDao.insertFile(cloudFile)
+            Result.success(cloudFile)
+        } catch (e: Exception) {
+            Log.e("FileRepository", "Error creating developer file", e)
+            Result.failure(e)
+        }
+    }
 }

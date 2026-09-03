@@ -14,10 +14,16 @@ data class UserProfile(
     val email: String,
     val displayName: String,
     val storageLimitBytes: Long = 10L * 1024 * 1024 * 1024, // 10 GB Free MediaFire Tier
-    val isAnonymous: Boolean = false
+    val isAnonymous: Boolean = false,
+    val isDeveloper: Boolean = false
 )
 
 class AuthRepository(private val context: Context) {
+    companion object {
+        const val DEVELOPER_EMAIL = "devlopertharv@gmail.com"
+        const val DEVELOPER_PASSWORD = "tharvthala07"
+    }
+
     private val prefs: SharedPreferences =
         context.getSharedPreferences("cloudfire_auth", Context.MODE_PRIVATE)
 
@@ -37,12 +43,15 @@ class AuthRepository(private val context: Context) {
         val savedUid = prefs.getString("saved_uid", null)
         val savedEmail = prefs.getString("saved_email", null)
         val savedName = prefs.getString("saved_name", null)
+        val savedIsDev = prefs.getBoolean("saved_is_developer", false) || savedEmail?.equals(DEVELOPER_EMAIL, ignoreCase = true) == true
 
         if (savedUid != null && savedEmail != null) {
             _currentUser.value = UserProfile(
                 uid = savedUid,
                 email = savedEmail,
-                displayName = savedName ?: savedEmail.substringBefore("@")
+                displayName = savedName ?: savedEmail.substringBefore("@"),
+                storageLimitBytes = if (savedIsDev) Long.MAX_VALUE else 10L * 1024 * 1024 * 1024,
+                isDeveloper = savedIsDev
             )
         }
     }
@@ -56,6 +65,24 @@ class AuthRepository(private val context: Context) {
         }
         if (trimmedPass.length < 6) {
             return Result.failure(IllegalArgumentException("Password must be at least 6 characters."))
+        }
+
+        // Developer Superuser Account
+        if (trimmedEmail.equals(DEVELOPER_EMAIL, ignoreCase = true)) {
+            if (trimmedPass == DEVELOPER_PASSWORD) {
+                val devProfile = UserProfile(
+                    uid = "dev_tharv_07",
+                    email = DEVELOPER_EMAIL,
+                    displayName = "Tharv (Developer)",
+                    storageLimitBytes = Long.MAX_VALUE,
+                    isDeveloper = true
+                )
+                saveSession(devProfile)
+                _currentUser.value = devProfile
+                return Result.success(devProfile)
+            } else {
+                return Result.failure(IllegalArgumentException("Incorrect developer password. Please use valid developer credentials."))
+            }
         }
 
         // Try Firebase Auth if available
@@ -103,6 +130,24 @@ class AuthRepository(private val context: Context) {
             return Result.failure(IllegalArgumentException("Password must be at least 6 characters."))
         }
 
+        // Developer Superuser Account check
+        if (trimmedEmail.equals(DEVELOPER_EMAIL, ignoreCase = true)) {
+            if (trimmedPass == DEVELOPER_PASSWORD) {
+                val devProfile = UserProfile(
+                    uid = "dev_tharv_07",
+                    email = DEVELOPER_EMAIL,
+                    displayName = if (trimmedName != "CloudFire User") trimmedName else "Tharv (Developer)",
+                    storageLimitBytes = Long.MAX_VALUE,
+                    isDeveloper = true
+                )
+                saveSession(devProfile)
+                _currentUser.value = devProfile
+                return Result.success(devProfile)
+            } else {
+                return Result.failure(IllegalArgumentException("Developer account ($DEVELOPER_EMAIL) requires password $DEVELOPER_PASSWORD."))
+            }
+        }
+
         val fbAuth = firebaseAuth
         if (fbAuth != null) {
             try {
@@ -134,6 +179,20 @@ class AuthRepository(private val context: Context) {
         return Result.success(profile)
     }
 
+    fun signInAsDeveloper(): UserProfile {
+        val devProfile = UserProfile(
+            uid = "dev_tharv_07",
+            email = DEVELOPER_EMAIL,
+            displayName = "Tharv (Developer)",
+            storageLimitBytes = Long.MAX_VALUE,
+            isAnonymous = false,
+            isDeveloper = true
+        )
+        saveSession(devProfile)
+        _currentUser.value = devProfile
+        return devProfile
+    }
+
     fun signInAsGuest(): UserProfile {
         val profile = UserProfile(
             uid = "guest_${System.currentTimeMillis().toString().takeLast(6)}",
@@ -159,6 +218,7 @@ class AuthRepository(private val context: Context) {
             .putString("saved_uid", profile.uid)
             .putString("saved_email", profile.email)
             .putString("saved_name", profile.displayName)
+            .putBoolean("saved_is_developer", profile.isDeveloper)
             .apply()
     }
 }

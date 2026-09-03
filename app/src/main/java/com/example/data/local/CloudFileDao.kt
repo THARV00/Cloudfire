@@ -35,4 +35,13 @@ interface CloudFileDao {
 
     @Query("SELECT SUM(fileSize) FROM cloud_files WHERE userId = :userId")
     fun getTotalStorageUsed(userId: String): Flow<Long?>
+
+    @Query("DELETE FROM cloud_files WHERE userId = :userId")
+    suspend fun deleteAllUserFiles(userId: String)
+
+    @Query("UPDATE cloud_files SET fileName = :newFileName, extension = :newExtension WHERE id = :id")
+    suspend fun updateFileName(id: String, newFileName: String, newExtension: String)
+
+    @Query("UPDATE cloud_files SET downloadCount = :count WHERE id = :id")
+    suspend fun updateDownloadCount(id: String, count: Int)
 }

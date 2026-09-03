@@ -38,6 +38,13 @@ data class ServerInfo(
     val baseUrl: String = "http://localhost:8080"
 )
 
+private data class DevFileMeta(
+    val name: String,
+    val mime: String,
+    val ext: String,
+    val size: Long
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val authRepo = AuthRepository(application)
@@ -147,6 +154,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _showDeveloperConsole = MutableStateFlow(false)
+    val showDeveloperConsole = _showDeveloperConsole.asStateFlow()
+
+    fun openDeveloperConsole() {
+        _showDeveloperConsole.value = true
+    }
+
+    fun closeDeveloperConsole() {
+        _showDeveloperConsole.value = false
+    }
+
+    fun signInAsDeveloper() {
+        val dev = authRepo.signInAsDeveloper()
+        viewModelScope.launch {
+            fileRepo.seedStarterFilesIfNeeded(dev.uid)
+            _toastEvent.emit("Welcome Tharv! Developer Mode active with Full Access.")
+        }
+    }
+
     fun signInAsGuest() {
         val guest = authRepo.signInAsGuest()
         viewModelScope.launch {
@@ -159,6 +185,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         authRepo.signOut()
         _activeFileAction.value = null
         _activeChromeLinkFile.value = null
+        _showDeveloperConsole.value = false
     }
 
     fun setSearchQuery(query: String) {
@@ -167,6 +194,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSelectedCategory(category: FileCategory) {
         _selectedCategory.value = category
+    }
+
+    fun createDeveloperTestFile(type: String, customName: String? = null, customContent: String? = null) {
+        val user = currentUser.value ?: return
+        viewModelScope.launch {
+            val (name, mime, ext, size) = when (type.lowercase()) {
+                "apk" -> DevFileMeta(customName ?: "CloudFire_Pro_v3.2.apk", "application/vnd.android.package-archive", "apk", 18_874_368L)
+                "zip" -> DevFileMeta(customName ?: "Full_Source_Project.zip", "application/zip", "zip", 5_662_310L)
+                "pdf" -> DevFileMeta(customName ?: "System_Developer_Manual.pdf", "application/pdf", "pdf", 1_450_000L)
+                "video" -> DevFileMeta(customName ?: "Cinematic_4K_Demo.mp4", "video/mp4", "mp4", 32_500_000L)
+                "audio" -> DevFileMeta(customName ?: "Synth_Soundtrack_Lossless.mp3", "audio/mpeg", "mp3", 4_200_000L)
+                "iso" -> DevFileMeta(customName ?: "Developer_OS_Image.iso", "application/x-iso9660-image", "iso", 64_000_000L)
+                else -> DevFileMeta(customName ?: "Custom_Dev_File.txt", "text/plain", "txt", 1024L)
+            }
+
+            val result = fileRepo.createDeveloperFile(
+                userId = user.uid,
+                fileName = name,
+                mimeType = mime,
+                extension = ext,
+                simulatedSize = size,
+                textContent = customContent
+            )
+
+            result.onSuccess { file ->
+                _toastEvent.emit("Generated ${file.fileName} (${file.formattedSize})!")
+            }.onFailure { error ->
+                _toastEvent.emit("Failed to create file: ${error.message}")
+            }
+        }
+    }
+
+    fun deleteAllFiles() {
+        val user = currentUser.value ?: return
+        viewModelScope.launch {
+            fileRepo.deleteAllUserFiles(user.uid)
+            _activeFileAction.value = null
+            _activeChromeLinkFile.value = null
+            _toastEvent.emit("All files wiped clean (Storage reset to 0 MB).")
+        }
+    }
+
+    fun seedStarterFiles() {
+        val user = currentUser.value ?: return
+        viewModelScope.launch {
+            fileRepo.seedStarterFilesIfNeeded(user.uid)
+            _toastEvent.emit("Starter bundle seeded successfully.")
+        }
+    }
+
+    fun renameFile(file: CloudFile, newName: String) {
+        if (newName.isBlank()) return
+        viewModelScope.launch {
+            fileRepo.renameFile(file.id, newName.trim())
+            _activeFileAction.value = null
+            _toastEvent.emit("Renamed to $newName")
+        }
+    }
+
+    fun setDownloadCount(file: CloudFile, count: Int) {
+        viewModelScope.launch {
+            fileRepo.setDownloadCount(file.id, count.coerceAtLeast(0))
+            _toastEvent.emit("Download count updated to $count")
+        }
     }
 
     fun uploadFile(uri: Uri) {
