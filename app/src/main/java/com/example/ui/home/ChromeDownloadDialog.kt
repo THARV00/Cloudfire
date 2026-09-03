@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,6 +53,7 @@ import com.example.ui.theme.CloudFireCyan
 fun ChromeDownloadDialog(
     file: CloudFile,
     directDownloadUrl: String,
+    networkDownloadUrl: String = directDownloadUrl,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -135,7 +137,7 @@ fun ChromeDownloadDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Paste this link into Google Chrome's address bar. Chrome will automatically start downloading the file without any clicks!",
+                            text = "Paste this link into Chrome on this or any device on your Wi-Fi network. Chrome will automatically start downloading!",
                             fontSize = 12.sp,
                             color = Color(0xFF0C356A),
                             lineHeight = 16.sp
@@ -146,7 +148,7 @@ fun ChromeDownloadDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Download URL:",
+                    text = "Download URL (Network / Other Devices):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color.Gray
@@ -162,7 +164,7 @@ fun ChromeDownloadDialog(
                         .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                 ) {
                     Text(
-                        text = directDownloadUrl,
+                        text = networkDownloadUrl,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
                         color = CloudFireBlue,
@@ -190,20 +192,38 @@ fun ChromeDownloadDialog(
             }
         },
         dismissButton = {
-            FilledTonalButton(
-                onClick = {
-                    copyToClipboard(context, directDownloadUrl, "Chrome download link copied!")
-                },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.testTag("btn_dialog_copy_link")
-            ) {
-                Icon(
-                    Icons.Default.ContentCopy,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Copy Link")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        shareLink(context, file.fileName, networkDownloadUrl)
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("btn_dialog_share_link")
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share")
+                }
+
+                FilledTonalButton(
+                    onClick = {
+                        copyToClipboard(context, networkDownloadUrl, "Download link copied for sharing!")
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("btn_dialog_copy_link")
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Copy Link")
+                }
             }
         }
     )

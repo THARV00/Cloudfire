@@ -70,12 +70,17 @@ import com.example.ui.theme.FileCategoryDocument
 import com.example.ui.theme.FileCategoryImage
 import com.example.ui.theme.FileCategoryMedia
 
+import androidx.core.content.FileProvider
+import java.io.File
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileDetailsSheet(
     file: CloudFile,
     directDownloadUrl: String,
     webPageUrl: String,
+    networkDownloadUrl: String = directDownloadUrl,
+    networkWebPageUrl: String = webPageUrl,
     onDismiss: () -> Unit,
     onDelete: (CloudFile) -> Unit,
     onToggleFavorite: (CloudFile) -> Unit
@@ -191,7 +196,7 @@ fun FileDetailsSheet(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "When pasted into Chrome browser, download triggers automatically:",
+                        text = "Universal link for Chrome or any device on your Wi-Fi / network:",
                         fontSize = 12.sp,
                         color = Color(0xFF4A6B82)
                     )
@@ -204,7 +209,7 @@ fun FileDetailsSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = directDownloadUrl,
+                            text = networkDownloadUrl,
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace,
                             color = Color(0xFF1E293B),
@@ -245,7 +250,7 @@ fun FileDetailsSheet(
 
                 FilledTonalButton(
                     onClick = {
-                        copyToClipboard(context, directDownloadUrl, "Download link copied!")
+                        copyToClipboard(context, networkDownloadUrl, "Network download link copied for sharing!")
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -310,21 +315,33 @@ fun FileDetailsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Secondary Actions: Share & Delete
+            // Secondary Actions: Share Link, Send File & Delete
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
                     onClick = {
-                        shareLink(context, file.fileName, directDownloadUrl)
+                        shareLink(context, file.fileName, networkDownloadUrl)
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Share Link", fontSize = 13.sp)
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share Link", fontSize = 12.sp)
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        shareActualFile(context, file)
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Send File", fontSize = 12.sp)
                 }
 
                 OutlinedButton(
@@ -333,17 +350,43 @@ fun FileDetailsSheet(
                         onDismiss()
                     },
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(0.9f)
                         .testTag("btn_delete_file"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Delete", fontSize = 13.sp)
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Delete", fontSize = 12.sp)
                 }
             }
         }
+    }
+}
+
+fun shareActualFile(context: Context, file: CloudFile) {
+    try {
+        val targetFile = if (file.localFilePath.isNotEmpty()) {
+            File(file.localFilePath)
+        } else {
+            val fallback = File(context.filesDir, "uploads/${file.fileName}")
+            if (fallback.exists()) fallback else null
+        }
+
+        if (targetFile != null && targetFile.exists()) {
+            val authority = "${context.packageName}.fileprovider"
+            val contentUri = FileProvider.getUriForFile(context, authority, targetFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = file.mimeType.ifEmpty { "*/*" }
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Send ${file.fileName}"))
+        } else {
+            Toast.makeText(context, "File not found locally to send", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Toast.makeText(context, "Could not send file: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 

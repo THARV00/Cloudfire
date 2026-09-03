@@ -38,12 +38,12 @@ object LocalFileServer {
 
         serverJob = scope.launch {
             try {
-                // Try port 8080 first, fallback to next ports if busy
+                // Bind to 0.0.0.0 so all devices on Wi-Fi / Local Network can connect
                 var port = DEFAULT_PORT
                 var bound = false
                 while (!bound && port < 8095) {
                     try {
-                        serverSocket = ServerSocket(port)
+                        serverSocket = ServerSocket(port, 50, InetAddress.getByName("0.0.0.0"))
                         activePort = port
                         bound = true
                     } catch (e: Exception) {
@@ -88,15 +88,28 @@ object LocalFileServer {
     fun getPort(): Int = activePort
 
     fun getBaseUrl(): String {
-        return "http://localhost:$activePort"
+        val ip = getLocalIpAddress() ?: "localhost"
+        return "http://$ip:$activePort"
     }
 
-    fun getDirectDownloadUrl(fileId: String): String {
-        return "http://localhost:$activePort/download/$fileId"
+    fun getDirectDownloadUrl(fileId: String, forSharing: Boolean = false): String {
+        val host = if (forSharing) (getLocalIpAddress() ?: "localhost") else "localhost"
+        return "http://$host:$activePort/download/$fileId"
     }
 
-    fun getWebPageUrl(fileId: String): String {
-        return "http://localhost:$activePort/file/$fileId"
+    fun getWebPageUrl(fileId: String, forSharing: Boolean = false): String {
+        val host = if (forSharing) (getLocalIpAddress() ?: "localhost") else "localhost"
+        return "http://$host:$activePort/file/$fileId"
+    }
+
+    fun getNetworkDownloadUrl(fileId: String): String {
+        val ip = getLocalIpAddress() ?: "localhost"
+        return "http://$ip:$activePort/download/$fileId"
+    }
+
+    fun getNetworkWebPageUrl(fileId: String): String {
+        val ip = getLocalIpAddress() ?: "localhost"
+        return "http://$ip:$activePort/file/$fileId"
     }
 
     fun getLocalIpAddress(): String? {
@@ -104,11 +117,15 @@ object LocalFileServer {
             val interfaces = NetworkInterface.getNetworkInterfaces()
             while (interfaces.hasMoreElements()) {
                 val networkInterface = interfaces.nextElement()
+                if (networkInterface.isLoopback || !networkInterface.isUp) continue
                 val addresses = networkInterface.inetAddresses
                 while (addresses.hasMoreElements()) {
                     val address = addresses.nextElement()
                     if (!address.isLoopbackAddress && address.hostAddress?.contains(':') == false) {
-                        return address.hostAddress
+                        val host = address.hostAddress
+                        if (host != null && host != "127.0.0.1") {
+                            return host
+                        }
                     }
                 }
             }

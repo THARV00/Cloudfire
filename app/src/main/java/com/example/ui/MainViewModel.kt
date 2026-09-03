@@ -335,6 +335,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return LocalFileServer.getWebPageUrl(fileId)
     }
 
+    fun getNetworkDownloadUrl(fileId: String): String {
+        return LocalFileServer.getNetworkDownloadUrl(fileId)
+    }
+
+    fun getNetworkWebPageUrl(fileId: String): String {
+        return LocalFileServer.getNetworkWebPageUrl(fileId)
+    }
+
     override fun onCleared() {
         super.onCleared()
         // Note: server can stay alive during app lifecycle

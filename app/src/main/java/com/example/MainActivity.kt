@@ -113,6 +113,8 @@ fun CloudFireApp(viewModel: MainViewModel) {
                     file = file,
                     directDownloadUrl = viewModel.getDirectDownloadUrl(file.id),
                     webPageUrl = viewModel.getWebPageUrl(file.id),
+                    networkDownloadUrl = viewModel.getNetworkDownloadUrl(file.id),
+                    networkWebPageUrl = viewModel.getNetworkWebPageUrl(file.id),
                     onDismiss = viewModel::closeFileAction,
                     onDelete = viewModel::deleteFile,
                     onToggleFavorite = viewModel::toggleFavorite
@@ -124,6 +126,7 @@ fun CloudFireApp(viewModel: MainViewModel) {
                 ChromeDownloadDialog(
                     file = file,
                     directDownloadUrl = viewModel.getDirectDownloadUrl(file.id),
+                    networkDownloadUrl = viewModel.getNetworkDownloadUrl(file.id),
                     onDismiss = viewModel::closeChromeLinkDialog
                 )
             }
