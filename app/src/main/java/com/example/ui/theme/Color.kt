@@ -28,3 +28,10 @@ val FileCategoryMedia = Color(0xFF8E24AA) // Video, Audio
 val FileCategoryApp = Color(0xFF2E7D32) // APK, Exe
 val FileCategoryImage = Color(0xFF0288D1) // Images
 val FileCategoryCode = Color(0xFF00897B) // Code, TXT
+
+// Cloudflare Official Brand Colors
+val CloudflareOrange = Color(0xFFF38020)
+val CloudflareOrangeDark = Color(0xFFD66910)
+val CloudflareOrangeLight = Color(0xFFFFF3EB)
+val CloudflareNavy = Color(0xFF1E1B4B)
+

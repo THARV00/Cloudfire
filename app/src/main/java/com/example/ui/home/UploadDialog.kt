@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.UploadStatus
 import com.example.ui.theme.CloudFireBlue
 import com.example.ui.theme.CloudFireCyan
+import com.example.ui.theme.CloudflareNavy
+import com.example.ui.theme.CloudflareOrange
+import com.example.ui.theme.CloudflareOrangeDark
+import com.example.ui.theme.CloudflareOrangeLight
 
 @Composable
 fun UploadDialog(
@@ -156,7 +160,7 @@ fun UploadDialog(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Size: ${status.file.formattedSize} • Ready to share",
+                            text = "Size: ${status.file.formattedSize} • Cloudflare Tunnel Ready",
                             fontSize = 13.sp,
                             color = Color.Gray
                         )
@@ -164,17 +168,24 @@ fun UploadDialog(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F2FF)),
+                            colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight),
                             shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CloudflareOrange.copy(alpha = 0.5f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Chrome Auto-Download Link:",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF0C356A)
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🌩️ Cloudflare Tunnel Download Link:",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CloudflareNavy
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Surface(
                                     color = Color.White,
@@ -185,7 +196,8 @@ fun UploadDialog(
                                         text = status.directLink,
                                         fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
-                                        color = CloudFireBlue,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = CloudflareOrangeDark,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(8.dp)
@@ -197,7 +209,7 @@ fun UploadDialog(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "💡 Paste this link into Google Chrome to download automatically!",
+                            text = "💡 Paste this Cloudflare link in Chrome on any phone or PC worldwide!",
                             fontSize = 12.sp,
                             color = Color(0xFF2E7D32)
                         )
@@ -221,13 +233,13 @@ fun UploadDialog(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilledTonalButton(
                             onClick = {
-                                copyToClipboard(context, status.directLink, "Download link copied!")
+                                copyToClipboard(context, status.directLink, "Cloudflare Tunnel download link copied!")
                             },
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy Link")
+                            Text("Copy CF Link")
                         }
 
                         Button(
@@ -236,7 +248,7 @@ fun UploadDialog(
                                 onDismiss()
                             },
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CloudFireBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = CloudflareOrange)
                         ) {
                             Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))

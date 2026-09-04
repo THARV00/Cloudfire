@@ -35,7 +35,9 @@ sealed interface UploadStatus {
 data class ServerInfo(
     val isRunning: Boolean = true,
     val port: Int = 8080,
-    val baseUrl: String = "http://localhost:8080"
+    val baseUrl: String = "http://localhost:8080",
+    val cloudflareDomain: String = "cloudfire-rapid.trycloudflare.com",
+    val isCloudflareActive: Boolean = true
 )
 
 private data class DevFileMeta(
@@ -61,11 +63,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uploadStatus = MutableStateFlow<UploadStatus>(UploadStatus.Idle)
     val uploadStatus = _uploadStatus.asStateFlow()
 
+    private val _cloudflareDomain: MutableStateFlow<String> = MutableStateFlow(LocalFileServer.getCloudflareDomain())
+    val cloudflareDomain: StateFlow<String> = _cloudflareDomain.asStateFlow()
+
+    private val _isCloudflareEnabled: MutableStateFlow<Boolean> = MutableStateFlow(LocalFileServer.isCloudflareEnabled())
+    val isCloudflareEnabled: StateFlow<Boolean> = _isCloudflareEnabled.asStateFlow()
+
+    private val _showCloudflareDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val showCloudflareDialog: StateFlow<Boolean> = _showCloudflareDialog.asStateFlow()
+
     private val _serverInfo = MutableStateFlow(
         ServerInfo(
             isRunning = true,
             port = LocalFileServer.getPort(),
-            baseUrl = LocalFileServer.getBaseUrl()
+            baseUrl = LocalFileServer.getBaseUrl(),
+            cloudflareDomain = LocalFileServer.getCloudflareDomain(),
+            isCloudflareActive = LocalFileServer.isCloudflareEnabled()
         )
     )
     val serverInfo = _serverInfo.asStateFlow()
@@ -279,13 +292,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             result.onSuccess { file ->
-                val directLink = LocalFileServer.getDirectDownloadUrl(file.id)
-                _uploadStatus.value = UploadStatus.Completed(file, directLink)
-                _toastEvent.emit("File uploaded successfully! Download link ready.")
+                val cfLink = LocalFileServer.getCloudflareDownloadUrl(file.id)
+                _uploadStatus.value = UploadStatus.Completed(file, cfLink)
+                _toastEvent.emit("File uploaded! Cloudflare Tunnel link generated.")
             }.onFailure { error ->
                 _uploadStatus.value = UploadStatus.Error(error.message ?: "Upload failed")
             }
         }
+    }
+
+    fun openCloudflareDialog() {
+        _showCloudflareDialog.value = true
+    }
+
+    fun closeCloudflareDialog() {
+        _showCloudflareDialog.value = false
+    }
+
+    fun setCloudflareDomain(domain: String) {
+        val app = getApplication<Application>()
+        LocalFileServer.setCloudflareDomain(app, domain)
+        val updated = LocalFileServer.getCloudflareDomain()
+        _cloudflareDomain.value = updated
+        _serverInfo.value = _serverInfo.value.copy(cloudflareDomain = updated)
+        viewModelScope.launch {
+            _toastEvent.emit("Cloudflare Tunnel updated: $updated")
+        }
+    }
+
+    fun generateNewQuickTunnel() {
+        val app = getApplication<Application>()
+        val newDomain = LocalFileServer.generateNewQuickTunnel(app)
+        _cloudflareDomain.value = newDomain
+        _serverInfo.value = _serverInfo.value.copy(cloudflareDomain = newDomain)
+        viewModelScope.launch {
+            _toastEvent.emit("Generated new TryCloudflare Tunnel: $newDomain")
+        }
+    }
+
+    fun toggleCloudflareTunnel(enabled: Boolean) {
+        val app = getApplication<Application>()
+        LocalFileServer.setCloudflareEnabled(app, enabled)
+        _isCloudflareEnabled.value = enabled
+        _serverInfo.value = _serverInfo.value.copy(isCloudflareActive = enabled)
+        viewModelScope.launch {
+            val msg = if (enabled) "Cloudflare Tunnel active (HTTPS worldwide)" else "Local Wi-Fi mode only"
+            _toastEvent.emit(msg)
+        }
+    }
+
+    fun getCloudflareDownloadUrl(fileId: String): String {
+        return LocalFileServer.getCloudflareDownloadUrl(fileId)
+    }
+
+    fun getCloudflareWebPageUrl(fileId: String): String {
+        return LocalFileServer.getCloudflareWebPageUrl(fileId)
     }
 
     fun dismissUpload() {

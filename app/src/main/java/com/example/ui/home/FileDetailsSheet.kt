@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,10 @@ import com.example.data.model.CloudFile
 import com.example.data.model.FileCategory
 import com.example.ui.theme.CloudFireBlue
 import com.example.ui.theme.CloudFireCyan
+import com.example.ui.theme.CloudflareNavy
+import com.example.ui.theme.CloudflareOrange
+import com.example.ui.theme.CloudflareOrangeDark
+import com.example.ui.theme.CloudflareOrangeLight
 import com.example.ui.theme.FileCategoryApp
 import com.example.ui.theme.FileCategoryArchive
 import com.example.ui.theme.FileCategoryDocument
@@ -81,6 +86,10 @@ fun FileDetailsSheet(
     webPageUrl: String,
     networkDownloadUrl: String = directDownloadUrl,
     networkWebPageUrl: String = webPageUrl,
+    cloudflareDownloadUrl: String = networkDownloadUrl,
+    cloudflareWebPageUrl: String = networkWebPageUrl,
+    isCloudflareEnabled: Boolean = true,
+    onOpenCloudflareSettings: () -> Unit = {},
     onDismiss: () -> Unit,
     onDelete: (CloudFile) -> Unit,
     onToggleFavorite: (CloudFile) -> Unit
@@ -170,35 +179,49 @@ fun FileDetailsSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Chrome Auto-Download Highlight Box
+            // Cloudflare Tunnel Auto-Download Hero Box
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF3FF))
+                colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, CloudflareOrange.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = CloudFireBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Direct Chrome Download Link",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = Color(0xFF0D3B66)
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🌩️", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Cloudflare Tunnel Download Link",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = CloudflareNavy
+                            )
+                        }
+                        Surface(
+                            color = CloudflareOrange,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "HTTPS WORLDWIDE",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Universal link for Chrome or any device on your Wi-Fi / network:",
+                        text = "Worldwide download link via Cloudflare Tunnel. Works on any phone, PC, Mac, or tablet globally:",
                         fontSize = 12.sp,
-                        color = Color(0xFF4A6B82)
+                        color = Color(0xFF4A3E56)
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -209,85 +232,114 @@ fun FileDetailsSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = networkDownloadUrl,
+                            text = cloudflareDownloadUrl,
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace,
-                            color = Color(0xFF1E293B),
+                            fontWeight = FontWeight.SemiBold,
+                            color = CloudflareOrangeDark,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(10.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                copyToClipboard(context, cloudflareDownloadUrl, "Cloudflare Tunnel download link copied!")
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .testTag("btn_copy_cf_link"),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CloudflareOrange)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Copy CF Link", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                openInChrome(context, cloudflareDownloadUrl)
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .testTag("btn_open_chrome"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Open in Chrome", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Primary Actions: Open in Chrome & Copy
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        openInChrome(context, directDownloadUrl)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("btn_open_chrome"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CloudFireBlue)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.OpenInBrowser,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Open in Chrome", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-
-                FilledTonalButton(
-                    onClick = {
-                        copyToClipboard(context, networkDownloadUrl, "Network download link copied for sharing!")
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("btn_copy_link"),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copy Link", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Open MediaFire Web Page
+            // Open Cloudflare Landing Page
             OutlinedButton(
                 onClick = {
-                    openInBrowser(context, webPageUrl)
+                    openInBrowser(context, cloudflareWebPageUrl)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp),
+                    .height(44.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Language,
                     contentDescription = null,
-                    tint = CloudFireBlue,
+                    tint = CloudflareOrangeDark,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("View CloudFire Web Landing Page", color = CloudFireBlue, fontSize = 13.sp)
+                Text("View Landing Page via Cloudflare", color = CloudflareNavy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Local Network Alternate Box
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Local Wi-Fi Network Link:", fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Copy Local",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CloudFireBlue,
+                            modifier = Modifier.clickable {
+                                copyToClipboard(context, networkDownloadUrl, "Local network link copied!")
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = networkDownloadUrl,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color.DarkGray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -309,7 +361,7 @@ fun FileDetailsSheet(
                 }
                 Column {
                     Text("Security", fontSize = 11.sp, color = Color.Gray)
-                    Text("Verified Clean", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2E7D32))
+                    Text("Cloudflare SSL", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2E7D32))
                 }
             }
 
@@ -322,14 +374,14 @@ fun FileDetailsSheet(
             ) {
                 OutlinedButton(
                     onClick = {
-                        shareLink(context, file.fileName, networkDownloadUrl)
+                        shareLink(context, file.fileName, cloudflareDownloadUrl)
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Share Link", fontSize = 12.sp)
+                    Text("Share CF Link", fontSize = 12.sp)
                 }
 
                 OutlinedButton(

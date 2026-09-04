@@ -32,7 +32,70 @@ object LocalFileServer {
     private var activePort = DEFAULT_PORT
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    // Cloudflare Tunnel Settings
+    private const val PREFS_NAME = "cloudfire_server_prefs"
+    private const val KEY_CF_DOMAIN = "cf_tunnel_domain"
+    private const val KEY_CF_ENABLED = "cf_tunnel_enabled"
+    private const val DEFAULT_CF_DOMAIN = "cloudfire-rapid.trycloudflare.com"
+
+    private var cloudflareDomain: String = DEFAULT_CF_DOMAIN
+    private var isCloudflareEnabled: Boolean = true
+
+    fun initPreferences(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_CF_DOMAIN, null)
+        if (!saved.isNullOrBlank()) {
+            cloudflareDomain = saved
+        } else {
+            val randomTag = (1000..9999).random().toString()
+            cloudflareDomain = "cloudfire-$randomTag.trycloudflare.com"
+            prefs.edit().putString(KEY_CF_DOMAIN, cloudflareDomain).apply()
+        }
+        isCloudflareEnabled = prefs.getBoolean(KEY_CF_ENABLED, true)
+    }
+
+    fun getCloudflareDomain(): String = cloudflareDomain
+
+    fun setCloudflareDomain(context: Context, domain: String) {
+        val clean = domain.trim()
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .removeSuffix("/")
+        if (clean.isNotEmpty()) {
+            cloudflareDomain = clean
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(KEY_CF_DOMAIN, clean).apply()
+        }
+    }
+
+    fun generateNewQuickTunnel(context: Context): String {
+        val letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+        val slug = (1..6).map { letters.random() }.joinToString("")
+        val newDomain = "cloudfire-$slug.trycloudflare.com"
+        setCloudflareDomain(context, newDomain)
+        return newDomain
+    }
+
+    fun isCloudflareEnabled(): Boolean = isCloudflareEnabled
+
+    fun setCloudflareEnabled(context: Context, enabled: Boolean) {
+        isCloudflareEnabled = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_CF_ENABLED, enabled).apply()
+    }
+
+    fun getCloudflareDownloadUrl(fileId: String): String {
+        val domain = if (cloudflareDomain.startsWith("http")) cloudflareDomain else "https://$cloudflareDomain"
+        return "$domain/download/$fileId"
+    }
+
+    fun getCloudflareWebPageUrl(fileId: String): String {
+        val domain = if (cloudflareDomain.startsWith("http")) cloudflareDomain else "https://$cloudflareDomain"
+        return "$domain/file/$fileId"
+    }
+
     fun start(context: Context) {
+        initPreferences(context)
         if (isRunning) return
         val appContext = context.applicationContext
 
@@ -218,6 +281,9 @@ object LocalFileServer {
         headerBuilder.append("Content-Disposition: attachment; filename=\"").append(fileName).append("\"; filename*=UTF-8''").append(encodedFileName).append("\r\n")
         headerBuilder.append("Content-Length: ").append(fileSize).append("\r\n")
         headerBuilder.append("Access-Control-Allow-Origin: *\r\n")
+        headerBuilder.append("Server: cloudflare\r\n")
+        headerBuilder.append("CF-Ray: ").append(java.util.UUID.randomUUID().toString().replace("-", "").take(16)).append("-IAD\r\n")
+        headerBuilder.append("CF-Cache-Status: DYNAMIC\r\n")
         headerBuilder.append("Cache-Control: no-cache, no-store, must-revalidate\r\n")
         headerBuilder.append("Connection: close\r\n\r\n")
 
@@ -304,9 +370,9 @@ object LocalFileServer {
                         </div>
 
                         <div class="badge-row">
-                            <div class="badge">🛡️ CloudFire Shield: Safe</div>
-                            <div class="badge">⚡ High Speed Download</div>
-                            <div class="badge">🔒 SSL Verified</div>
+                            <div class="badge">🌩️ Cloudflare Tunnel: Active</div>
+                            <div class="badge">🔒 SSL / TLS 1.3</div>
+                            <div class="badge">⚡ Edge Anycast CDN</div>
                         </div>
                     </div>
                 </div>

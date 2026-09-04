@@ -63,14 +63,21 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.repository.UserProfile
 import com.example.ui.theme.CloudFireBlue
 import com.example.ui.theme.CloudFireCyan
+import com.example.ui.theme.CloudflareNavy
+import com.example.ui.theme.CloudflareOrange
+import com.example.ui.theme.CloudflareOrangeDark
+import com.example.ui.theme.CloudflareOrangeLight
 
 @Composable
 fun DeveloperConsoleDialog(
     user: UserProfile? = null,
+    cloudflareDomain: String = "",
     onDismiss: () -> Unit,
     onCreateTestFile: (type: String, customName: String?, customContent: String?) -> Unit,
     onDeleteAllFiles: () -> Unit,
-    onSeedStarterFiles: () -> Unit
+    onSeedStarterFiles: () -> Unit,
+    onOpenCloudflareSettings: () -> Unit = {},
+    onGenerateNewQuickTunnel: () -> Unit = {}
 ) {
     var customFileName by remember { mutableStateOf("") }
     var customFileContent by remember { mutableStateOf("") }
@@ -346,7 +353,102 @@ fun DeveloperConsoleDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Section 3: Storage & System Controls
+                    // Section 3: Cloudflare Tunnel Operations
+                    Text(
+                        text = "🌩️ Cloudflare Tunnel Routing",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Public worldwide ingress powered by Cloudflare Anycast CDN:",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CloudflareOrange.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF00C853))
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Cloudflare Tunnel Active",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = CloudflareNavy
+                                    )
+                                }
+
+                                Surface(
+                                    color = CloudflareOrange,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "SSL TLS 1.3",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            if (cloudflareDomain.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "https://$cloudflareDomain",
+                                    fontSize = 12.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CloudflareOrangeDark
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = onOpenCloudflareSettings,
+                                    colors = ButtonDefaults.buttonColors(containerColor = CloudflareOrange),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Configure Tunnel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                OutlinedButton(
+                                    onClick = onGenerateNewQuickTunnel,
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("New Quick Tunnel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Section 4: Storage & System Controls
                     Text(
                         text = "🛠️ Storage & System Operations",
                         fontWeight = FontWeight.Bold,

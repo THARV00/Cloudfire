@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
@@ -90,6 +91,10 @@ import com.example.ui.ServerInfo
 import com.example.ui.theme.CloudFireBlue
 import com.example.ui.theme.CloudFireBlueDark
 import com.example.ui.theme.CloudFireCyan
+import com.example.ui.theme.CloudflareNavy
+import com.example.ui.theme.CloudflareOrange
+import com.example.ui.theme.CloudflareOrangeDark
+import com.example.ui.theme.CloudflareOrangeLight
 import com.example.ui.theme.FileCategoryApp
 import com.example.ui.theme.FileCategoryArchive
 import com.example.ui.theme.FileCategoryDocument
@@ -106,6 +111,8 @@ fun HomeScreen(
     searchQuery: String,
     selectedCategory: FileCategory,
     serverInfo: ServerInfo,
+    isCloudflareEnabled: Boolean = true,
+    cloudflareDomain: String = "",
     onSearchChange: (String) -> Unit,
     onCategorySelect: (FileCategory) -> Unit,
     onUploadClick: (Uri) -> Unit,
@@ -114,7 +121,8 @@ fun HomeScreen(
     onToggleFavorite: (CloudFile) -> Unit,
     onDeleteFile: (CloudFile) -> Unit,
     onSignOut: () -> Unit,
-    onOpenDeveloperConsole: () -> Unit = {}
+    onOpenDeveloperConsole: () -> Unit = {},
+    onOpenCloudflareTunnelDialog: () -> Unit = {}
 ) {
     var showUserMenu by remember { mutableStateOf(false) }
 
@@ -189,6 +197,31 @@ fun HomeScreen(
                         }
                     }
 
+                    // Cloudflare Tunnel status pill
+                    Surface(
+                        color = if (isCloudflareEnabled) CloudflareOrangeLight else Color(0xFFF1F5F9),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .padding(end = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onOpenCloudflareTunnelDialog() }
+                            .testTag("btn_top_cloudflare_tunnel")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🌩️", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isCloudflareEnabled) "CF Active" else "CF Off",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCloudflareEnabled) CloudflareNavy else Color.Gray
+                            )
+                        }
+                    }
+
                     // Server live pulse badge
                     Surface(
                         color = Color(0xFFE8F5E9),
@@ -207,7 +240,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = "Server :${serverInfo.port}",
+                                text = ":${serverInfo.port}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF2E7D32)
@@ -275,6 +308,19 @@ fun HomeScreen(
                                     )
                                 }
                             }
+
+                            DropdownMenuItem(
+                                text = { Text("Cloudflare Tunnel", fontWeight = FontWeight.Bold) },
+                                leadingIcon = {
+                                    Text("🌩️", fontSize = 16.sp)
+                                },
+                                onClick = {
+                                    showUserMenu = false
+                                    onOpenCloudflareTunnelDialog()
+                                },
+                                modifier = Modifier.testTag("menu_cloudflare_tunnel")
+                            )
+
                             if (user.isDeveloper) {
                                 DropdownMenuItem(
                                     text = { Text("Developer Console", fontWeight = FontWeight.Bold) },
@@ -338,6 +384,15 @@ fun HomeScreen(
                         limitBytes = user.storageLimitBytes,
                         isDeveloper = user.isDeveloper,
                         onOpenDeveloperConsole = onOpenDeveloperConsole
+                    )
+                }
+
+                // Cloudflare Tunnel Edge Ingress Banner
+                item {
+                    CloudflareTunnelBanner(
+                        domain = cloudflareDomain,
+                        isEnabled = isCloudflareEnabled,
+                        onOpenSettings = onOpenCloudflareTunnelDialog
                     )
                 }
 
@@ -831,31 +886,27 @@ fun FileItemRow(
                 }
             }
 
-            // Quick Chrome Link Button
+            // Quick Chrome / Cloudflare Link Button
             Surface(
-                color = Color(0xFFE8F2FF),
+                color = CloudflareOrangeLight,
                 shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CloudflareOrange.copy(alpha = 0.4f)),
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .clickable { onQuickChromeLink() }
                     .testTag("btn_quick_chrome_link_${file.id}")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Link,
-                        contentDescription = "Chrome Download Link",
-                        tint = CloudFireBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("🌩️", fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "Link",
+                        text = "CF Link",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = CloudFireBlue
+                        fontSize = 11.sp,
+                        color = CloudflareOrangeDark
                     )
                 }
             }
@@ -949,3 +1000,92 @@ fun EmptyFilesView(onUploadClick: () -> Unit) {
         }
     }
 }
+
+@Composable
+fun CloudflareTunnelBanner(
+    domain: String,
+    isEnabled: Boolean,
+    onOpenSettings: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clickable { onOpenSettings() }
+            .testTag("card_cloudflare_tunnel_banner"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight),
+        border = androidx.compose.foundation.BorderStroke(1.2.dp, CloudflareOrange.copy(alpha = 0.45f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(CloudflareOrange),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🌩️", fontSize = 20.sp)
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Cloudflare Tunnel Ingress",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = CloudflareNavy
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        color = if (isEnabled) Color(0xFF2E7D32) else Color.Gray,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = if (isEnabled) "ACTIVE" else "OFF",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = if (domain.isNotEmpty()) "https://$domain" else "Universal HTTPS Tunnel",
+                    fontSize = 11.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CloudflareOrangeDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "Files shareable worldwide via Chrome auto-download",
+                    fontSize = 11.sp,
+                    color = Color(0xFF4A3E56)
+                )
+            }
+
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.testTag("btn_banner_cf_settings")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Cloudflare Settings",
+                    tint = CloudflareNavy
+                )
+            }
+        }
+    }
+}
+
