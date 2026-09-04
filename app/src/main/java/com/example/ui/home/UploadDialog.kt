@@ -1,9 +1,11 @@
 package com.example.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,8 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,10 +32,15 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +62,7 @@ fun UploadDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    var isPublicLink by remember { mutableStateOf(false) }
 
     if (status is UploadStatus.Idle) return
 
@@ -146,6 +156,16 @@ fun UploadDialog(
                 }
 
                 is UploadStatus.Completed -> {
+                    val publicLink = remember(status.file.id, status.file.fileName) {
+                        val cleanName = try {
+                            java.net.URLEncoder.encode(status.file.fileName, "UTF-8").replace("+", "%20")
+                        } catch (e: Exception) {
+                            "file"
+                        }
+                        "https://www.mediafire.com/file/${status.file.id}/$cleanName"
+                    }
+                    val activeLink = if (isPublicLink) publicLink else status.directLink
+
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = status.file.fileName,
@@ -155,17 +175,22 @@ fun UploadDialog(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Size: ${status.file.formattedSize} • MediaFire Link Ready",
+                            text = "Size: ${status.file.formattedSize} • ${if (isPublicLink) "Public Worldwide Link" else "MediaFire Link Ready"}",
                             fontSize = 13.sp,
-                            color = Color.Gray
+                            color = if (isPublicLink) Color(0xFF2E7D32) else Color.Gray
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF3FF)),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isPublicLink) Color(0xFFE8F5E9) else Color(0xFFEBF3FF)
+                            ),
                             shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, CloudFireBlue.copy(alpha = 0.4f)),
+                            border = BorderStroke(
+                                1.2.dp,
+                                if (isPublicLink) Color(0xFF2E7D32) else CloudFireBlue.copy(alpha = 0.4f)
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -174,12 +199,28 @@ fun UploadDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "🔥 MediaFire Download Link:",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CloudFireBlue
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(if (isPublicLink) "🌐" else "🔥", fontSize = 14.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = if (isPublicLink) "Public MediaFire Link:" else "MediaFire Link:",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isPublicLink) Color(0xFF1B5E20) else CloudFireBlue
+                                        )
+                                    }
+                                    Surface(
+                                        color = if (isPublicLink) Color(0xFF2E7D32) else CloudFireBlue,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isPublicLink) "PUBLIC" else "LOCAL",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Surface(
@@ -188,11 +229,11 @@ fun UploadDialog(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        text = status.directLink,
+                                        text = activeLink,
                                         fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = CloudFireBlue,
+                                        color = if (isPublicLink) Color(0xFF1B5E20) else CloudFireBlue,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(8.dp)
@@ -201,12 +242,63 @@ fun UploadDialog(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Make Public Link Action / Status Toggle
+                        if (!isPublicLink) {
+                            OutlinedButton(
+                                onClick = {
+                                    isPublicLink = true
+                                    copyToClipboard(context, publicLink, "Public link created & copied to clipboard!")
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("btn_make_public_link"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.2.dp, Color(0xFF2E7D32)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32))
+                            ) {
+                                Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("🌐 Make Public Link", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        } else {
+                            Surface(
+                                color = Color(0xFFE8F5E9),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "✓ Shareable worldwide over internet",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    TextButton(
+                                        onClick = { isPublicLink = false },
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                    ) {
+                                        Text("Local Link", fontSize = 11.sp, color = Color.Gray)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "💡 Open in Chrome, Edge, Safari, or Firefox to view the MediaFire landing page and begin auto-download!",
+                            text = if (isPublicLink) {
+                                "💡 Anyone on the internet can open this link to download your file on any phone or computer!"
+                            } else {
+                                "💡 Tap 'Make Public Link' to create a universal worldwide shareable link!"
+                            },
                             fontSize = 12.sp,
-                            color = Color(0xFF1E3A8A)
+                            color = if (isPublicLink) Color(0xFF1B5E20) else Color(0xFF1E3A8A)
                         )
                     }
                 }
@@ -225,29 +317,42 @@ fun UploadDialog(
         confirmButton = {
             when (status) {
                 is UploadStatus.Completed -> {
+                    val publicLink = remember(status.file.id, status.file.fileName) {
+                        val cleanName = try {
+                            java.net.URLEncoder.encode(status.file.fileName, "UTF-8").replace("+", "%20")
+                        } catch (e: Exception) {
+                            "file"
+                        }
+                        "https://www.mediafire.com/file/${status.file.id}/$cleanName"
+                    }
+                    val activeLink = if (isPublicLink) publicLink else status.directLink
+
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilledTonalButton(
                             onClick = {
-                                copyToClipboard(context, status.directLink, "MediaFire download link copied!")
+                                val label = if (isPublicLink) "Public MediaFire link copied!" else "MediaFire download link copied!"
+                                copyToClipboard(context, activeLink, label)
                             },
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy Link")
+                            Text(if (isPublicLink) "Copy Public" else "Copy Link")
                         }
 
                         Button(
                             onClick = {
-                                openInBrowser(context, status.directLink)
+                                openInBrowser(context, activeLink)
                                 onDismiss()
                             },
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CloudFireBlue)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isPublicLink) Color(0xFF2E7D32) else CloudFireBlue
+                            )
                         ) {
-                            Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(if (isPublicLink) Icons.Default.Public else Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Open in MediaFire")
+                            Text(if (isPublicLink) "Open Public" else "Open in MediaFire")
                         }
                     }
                 }
@@ -264,8 +369,35 @@ fun UploadDialog(
         },
         dismissButton = {
             if (status is UploadStatus.Completed) {
-                TextButton(onClick = onDismiss) {
-                    Text("Done")
+                val publicLink = remember(status.file.id, status.file.fileName) {
+                    val cleanName = try {
+                        java.net.URLEncoder.encode(status.file.fileName, "UTF-8").replace("+", "%20")
+                    } catch (e: Exception) {
+                        "file"
+                    }
+                    "https://www.mediafire.com/file/${status.file.id}/$cleanName"
+                }
+                val activeLink = if (isPublicLink) publicLink else status.directLink
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        onClick = {
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, status.file.fileName)
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Download ${status.file.fileName} via MediaFire: $activeLink")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Download Link"))
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Share", fontSize = 12.sp)
+                    }
+
+                    TextButton(onClick = onDismiss) {
+                        Text("Done", fontSize = 12.sp)
+                    }
                 }
             }
         }

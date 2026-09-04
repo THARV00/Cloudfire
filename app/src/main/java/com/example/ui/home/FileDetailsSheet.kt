@@ -6,11 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,8 +51,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +96,17 @@ fun FileDetailsSheet(
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var isPublicLinkActive by remember { mutableStateOf(false) }
+
+    val publicLink = remember(file.id, file.fileName) {
+        val cleanName = try {
+            java.net.URLEncoder.encode(file.fileName, "UTF-8").replace("+", "%20")
+        } catch (e: Exception) {
+            "file"
+        }
+        "https://www.mediafire.com/file/${file.id}/$cleanName"
+    }
+    val effectiveUrl = if (isPublicLinkActive) publicLink else networkWebPageUrl
 
     val categoryColor = when (file.category) {
         FileCategory.DOCUMENT -> FileCategoryDocument
@@ -175,8 +194,13 @@ fun FileDetailsSheet(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF3FF)),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, CloudFireBlue.copy(alpha = 0.5f))
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isPublicLinkActive) Color(0xFFE8F5E9) else Color(0xFFEBF3FF)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp,
+                    if (isPublicLinkActive) Color(0xFF2E7D32) else CloudFireBlue.copy(alpha = 0.5f)
+                )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -185,21 +209,21 @@ fun FileDetailsSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🔥", fontSize = 18.sp)
+                            Text(if (isPublicLinkActive) "🌐" else "🔥", fontSize = 18.sp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "MediaFire Web & Download Link",
+                                text = if (isPublicLinkActive) "Public MediaFire Link" else "MediaFire Web & Download Link",
                                 fontWeight = FontWeight.Black,
                                 fontSize = 14.sp,
-                                color = CloudFireBlue
+                                color = if (isPublicLinkActive) Color(0xFF1B5E20) else CloudFireBlue
                             )
                         }
                         Surface(
-                            color = CloudFireBlue,
+                            color = if (isPublicLinkActive) Color(0xFF2E7D32) else CloudFireBlue,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "MEDIAFIRE",
+                                text = if (isPublicLinkActive) "PUBLIC WORLDWIDE" else "MEDIAFIRE",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp,
                                 color = Color.White,
@@ -211,9 +235,13 @@ fun FileDetailsSheet(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Opens signature MediaFire download page with instant auto-download in Chrome, Edge, Safari, or Firefox:",
+                        text = if (isPublicLinkActive) {
+                            "Global public web link accessible from anywhere worldwide without requiring same Wi-Fi:"
+                        } else {
+                            "Opens signature MediaFire download page with instant auto-download in Chrome, Edge, Safari, or Firefox:"
+                        },
                         fontSize = 12.sp,
-                        color = Color(0xFF2C3E50)
+                        color = if (isPublicLinkActive) Color(0xFF1B5E20) else Color(0xFF2C3E50)
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -224,18 +252,65 @@ fun FileDetailsSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = networkWebPageUrl,
+                            text = effectiveUrl,
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.SemiBold,
-                            color = CloudFireBlue,
+                            color = if (isPublicLinkActive) Color(0xFF1B5E20) else CloudFireBlue,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(10.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Make Public Link Button / Status
+                    if (!isPublicLinkActive) {
+                        OutlinedButton(
+                            onClick = {
+                                isPublicLinkActive = true
+                                copyToClipboard(context, publicLink, "Public link generated & copied to clipboard!")
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_details_make_public_link"),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.2.dp, Color(0xFF2E7D32)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32))
+                        ) {
+                            Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("🌐 Make Public Link (Worldwide)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    } else {
+                        Surface(
+                            color = Color(0xFFE8F5E9),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "✓ Accessible worldwide without Wi-Fi",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                TextButton(
+                                    onClick = { isPublicLinkActive = false },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Text("Switch to Local Link", fontSize = 11.sp, color = Color(0xFF2E7D32))
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -243,23 +318,34 @@ fun FileDetailsSheet(
                     ) {
                         Button(
                             onClick = {
-                                openInBrowser(context, networkWebPageUrl)
+                                openInBrowser(context, effectiveUrl)
                             },
                             modifier = Modifier
                                 .weight(1.2f)
                                 .height(46.dp)
                                 .testTag("btn_open_in_mediafire"),
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CloudFireBlue)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isPublicLinkActive) Color(0xFF2E7D32) else CloudFireBlue
+                            )
                         ) {
-                            Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(
+                                if (isPublicLinkActive) Icons.Default.Public else Icons.Default.OpenInBrowser,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Open in MediaFire", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                if (isPublicLinkActive) "Open Public Link" else "Open in MediaFire",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
 
                         FilledTonalButton(
                             onClick = {
-                                copyToClipboard(context, networkWebPageUrl, "MediaFire link copied to clipboard!")
+                                val msg = if (isPublicLinkActive) "Public MediaFire link copied to clipboard!" else "MediaFire link copied to clipboard!"
+                                copyToClipboard(context, effectiveUrl, msg)
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -269,7 +355,7 @@ fun FileDetailsSheet(
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy Link", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(if (isPublicLinkActive) "Copy Public" else "Copy Link", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                 }
@@ -356,14 +442,14 @@ fun FileDetailsSheet(
             ) {
                 OutlinedButton(
                     onClick = {
-                        shareLink(context, file.fileName, networkWebPageUrl)
+                        shareLink(context, file.fileName, effectiveUrl)
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Share Link", fontSize = 12.sp)
+                    Text(if (isPublicLinkActive) "Share Public" else "Share Link", fontSize = 12.sp)
                 }
 
                 OutlinedButton(

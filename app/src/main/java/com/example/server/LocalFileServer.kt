@@ -92,6 +92,30 @@ object LocalFileServer {
         return getNetworkWebPageUrl(fileId)
     }
 
+    fun getPublicLink(fileId: String, fileName: String = ""): String {
+        val cleanName = try {
+            java.net.URLEncoder.encode(fileName.ifEmpty { "download" }, "UTF-8")
+                .replace("+", "%20")
+        } catch (e: Exception) {
+            "file"
+        }
+        val domain = if (cloudflareDomain.isNotEmpty() && !cloudflareDomain.contains("trycloudflare")) {
+            cloudflareDomain
+        } else {
+            "www.mediafire.com"
+        }
+        return "https://$domain/file/$fileId/$cleanName"
+    }
+
+    fun getPublicDownloadUrl(fileId: String): String {
+        val domain = if (cloudflareDomain.isNotEmpty() && !cloudflareDomain.contains("trycloudflare")) {
+            cloudflareDomain
+        } else {
+            "www.mediafire.com"
+        }
+        return "https://$domain/download/$fileId"
+    }
+
     fun getCloudflareDownloadUrl(fileId: String): String {
         return getNetworkDownloadUrl(fileId)
     }

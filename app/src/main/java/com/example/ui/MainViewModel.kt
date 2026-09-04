@@ -349,6 +349,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return LocalFileServer.getMediaFireWebPageUrl(fileId)
     }
 
+    fun getPublicLink(fileId: String, fileName: String = ""): String {
+        return LocalFileServer.getPublicLink(fileId, fileName)
+    }
+
+    fun getPublicDownloadUrl(fileId: String): String {
+        return LocalFileServer.getPublicDownloadUrl(fileId)
+    }
+
     fun getCloudflareDownloadUrl(fileId: String): String {
         return LocalFileServer.getMediaFireDownloadUrl(fileId)
     }
