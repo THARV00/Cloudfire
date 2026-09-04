@@ -84,14 +84,20 @@ object LocalFileServer {
         prefs.edit().putBoolean(KEY_CF_ENABLED, enabled).apply()
     }
 
+    fun getMediaFireDownloadUrl(fileId: String): String {
+        return getNetworkDownloadUrl(fileId)
+    }
+
+    fun getMediaFireWebPageUrl(fileId: String): String {
+        return getNetworkWebPageUrl(fileId)
+    }
+
     fun getCloudflareDownloadUrl(fileId: String): String {
-        val domain = if (cloudflareDomain.startsWith("http")) cloudflareDomain else "https://$cloudflareDomain"
-        return "$domain/download/$fileId"
+        return getNetworkDownloadUrl(fileId)
     }
 
     fun getCloudflareWebPageUrl(fileId: String): String {
-        val domain = if (cloudflareDomain.startsWith("http")) cloudflareDomain else "https://$cloudflareDomain"
-        return "$domain/file/$fileId"
+        return getNetworkWebPageUrl(fileId)
     }
 
     fun start(context: Context) {
@@ -281,9 +287,8 @@ object LocalFileServer {
         headerBuilder.append("Content-Disposition: attachment; filename=\"").append(fileName).append("\"; filename*=UTF-8''").append(encodedFileName).append("\r\n")
         headerBuilder.append("Content-Length: ").append(fileSize).append("\r\n")
         headerBuilder.append("Access-Control-Allow-Origin: *\r\n")
-        headerBuilder.append("Server: cloudflare\r\n")
-        headerBuilder.append("CF-Ray: ").append(java.util.UUID.randomUUID().toString().replace("-", "").take(16)).append("-IAD\r\n")
-        headerBuilder.append("CF-Cache-Status: DYNAMIC\r\n")
+        headerBuilder.append("Server: MediaFire-Direct/3.0\r\n")
+        headerBuilder.append("X-MediaFire-FileId: ").append(fileId).append("\r\n")
         headerBuilder.append("Cache-Control: no-cache, no-store, must-revalidate\r\n")
         headerBuilder.append("Connection: close\r\n\r\n")
 
@@ -315,7 +320,7 @@ object LocalFileServer {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>$fileName - CloudFire</title>
+                <title>$fileName - MediaFire</title>
                 <style>
                     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
                     body { background: #f0f4f9; color: #1c2536; display: flex; flex-direction: column; min-height: 100vh; }
@@ -336,7 +341,7 @@ object LocalFileServer {
                     footer { text-align: center; padding: 24px; font-size: 13px; color: #94a3b8; }
                 </style>
                 <script>
-                    // Automatically trigger download in Chrome after landing
+                    // Automatically trigger download in browser after landing
                     window.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => {
                             window.location.href = '/download/$fileId';
@@ -350,9 +355,9 @@ object LocalFileServer {
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
                         </svg>
-                        Cloud<span>Fire</span>
+                        Media<span>Fire</span>
                     </div>
-                    <div style="font-size: 13px; opacity: 0.9;">Fast Cloud Sharing</div>
+                    <div style="font-size: 13px; opacity: 0.9;">Simple Cloud Sharing</div>
                 </header>
 
                 <div class="container">
@@ -366,19 +371,19 @@ object LocalFileServer {
                         </a>
 
                         <div class="auto-notice">
-                            🚀 Chrome will automatically start downloading this file. If it doesn't, tap the blue Download button above.
+                            🚀 Your browser will automatically start downloading this file. If it doesn't, tap the blue Download button above.
                         </div>
 
                         <div class="badge-row">
-                            <div class="badge">🌩️ Cloudflare Tunnel: Active</div>
-                            <div class="badge">🔒 SSL / TLS 1.3</div>
-                            <div class="badge">⚡ Edge Anycast CDN</div>
+                            <div class="badge">🔥 MediaFire Verified</div>
+                            <div class="badge">⚡ Direct Speed Stream</div>
+                            <div class="badge">🔒 Virus Free &amp; Clean</div>
                         </div>
                     </div>
                 </div>
 
                 <footer>
-                    CloudFire &copy; 2026 MediaFire Inspired File Storage &bull; Fast, Secure, Universal Download<br>
+                    MediaFire &bull; Simple, fast cloud storage &amp; instant file downloads<br>
                     <span style="font-size: 11px; opacity: 0.75;">devloper :- Tharv</span>
                 </footer>
             </body>

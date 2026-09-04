@@ -63,21 +63,14 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.repository.UserProfile
 import com.example.ui.theme.CloudFireBlue
 import com.example.ui.theme.CloudFireCyan
-import com.example.ui.theme.CloudflareNavy
-import com.example.ui.theme.CloudflareOrange
-import com.example.ui.theme.CloudflareOrangeDark
-import com.example.ui.theme.CloudflareOrangeLight
 
 @Composable
 fun DeveloperConsoleDialog(
     user: UserProfile? = null,
-    cloudflareDomain: String = "",
     onDismiss: () -> Unit,
     onCreateTestFile: (type: String, customName: String?, customContent: String?) -> Unit,
     onDeleteAllFiles: () -> Unit,
-    onSeedStarterFiles: () -> Unit,
-    onOpenCloudflareSettings: () -> Unit = {},
-    onGenerateNewQuickTunnel: () -> Unit = {}
+    onSeedStarterFiles: () -> Unit
 ) {
     var customFileName by remember { mutableStateOf("") }
     var customFileContent by remember { mutableStateOf("") }
@@ -353,15 +346,15 @@ fun DeveloperConsoleDialog(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Section 3: Cloudflare Tunnel Operations
+                    // Section 3: MediaFire Engine & Distribution
                     Text(
-                        text = "🌩️ Cloudflare Tunnel Routing",
+                        text = "🔥 MediaFire Engine & Web Distribution",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Public worldwide ingress powered by Cloudflare Anycast CDN:",
+                        text = "High-performance HTTP server serving instant MediaFire landing pages and direct file downloads:",
                         fontSize = 12.sp,
                         color = Color.Gray,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -369,8 +362,8 @@ fun DeveloperConsoleDialog(
 
                     Card(
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, CloudflareOrange.copy(alpha = 0.4f)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF3FF)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CloudFireBlue.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -388,19 +381,19 @@ fun DeveloperConsoleDialog(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Cloudflare Tunnel Active",
+                                        text = "MediaFire Server Active",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
-                                        color = CloudflareNavy
+                                        color = CloudFireBlue
                                     )
                                 }
 
                                 Surface(
-                                    color = CloudflareOrange,
+                                    color = CloudFireBlue,
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
-                                        text = "SSL TLS 1.3",
+                                        text = "MEDIAFIRE V3",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -409,40 +402,12 @@ fun DeveloperConsoleDialog(
                                 }
                             }
 
-                            if (cloudflareDomain.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "https://$cloudflareDomain",
-                                    fontSize = 12.sp,
-                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = CloudflareOrangeDark
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = onOpenCloudflareSettings,
-                                    colors = ButtonDefaults.buttonColors(containerColor = CloudflareOrange),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Configure Tunnel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                OutlinedButton(
-                                    onClick = onGenerateNewQuickTunnel,
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("New Quick Tunnel", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Automated Chrome streaming & instant download page routing",
+                                fontSize = 12.sp,
+                                color = Color(0xFF1E3A8A)
+                            )
                         }
                     }
 

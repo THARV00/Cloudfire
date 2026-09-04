@@ -22,7 +22,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.MainViewModel
 import com.example.ui.auth.AuthScreen
 import com.example.ui.home.ChromeDownloadDialog
-import com.example.ui.home.CloudflareTunnelDialog
 import com.example.ui.home.DeveloperConsoleDialog
 import com.example.ui.home.FileDetailsSheet
 import com.example.ui.home.HomeScreen
@@ -54,9 +53,6 @@ fun CloudFireApp(viewModel: MainViewModel) {
     val activeFileAction by viewModel.activeFileAction.collectAsStateWithLifecycle()
     val activeChromeLinkFile by viewModel.activeChromeLinkFile.collectAsStateWithLifecycle()
     val showDeveloperConsole by viewModel.showDeveloperConsole.collectAsStateWithLifecycle()
-    val cloudflareDomain by viewModel.cloudflareDomain.collectAsStateWithLifecycle()
-    val isCloudflareEnabled by viewModel.isCloudflareEnabled.collectAsStateWithLifecycle()
-    val showCloudflareDialog by viewModel.showCloudflareDialog.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -87,8 +83,6 @@ fun CloudFireApp(viewModel: MainViewModel) {
                         searchQuery = searchQuery,
                         selectedCategory = selectedCategory,
                         serverInfo = serverInfo,
-                        isCloudflareEnabled = isCloudflareEnabled,
-                        cloudflareDomain = cloudflareDomain,
                         onSearchChange = viewModel::setSearchQuery,
                         onCategorySelect = viewModel::setSelectedCategory,
                         onUploadClick = viewModel::uploadFile,
@@ -97,8 +91,7 @@ fun CloudFireApp(viewModel: MainViewModel) {
                         onToggleFavorite = viewModel::toggleFavorite,
                         onDeleteFile = viewModel::deleteFile,
                         onSignOut = viewModel::signOut,
-                        onOpenDeveloperConsole = viewModel::openDeveloperConsole,
-                        onOpenCloudflareTunnelDialog = viewModel::openCloudflareDialog
+                        onOpenDeveloperConsole = viewModel::openDeveloperConsole
                     )
                 } else {
                     AuthScreen(
@@ -114,43 +107,28 @@ fun CloudFireApp(viewModel: MainViewModel) {
                 onDismiss = viewModel::dismissUpload
             )
 
-            // File Details & Cloudflare Share Bottom Sheet
+            // File Details & MediaFire Share Bottom Sheet
             activeFileAction?.let { file ->
                 FileDetailsSheet(
                     file = file,
                     directDownloadUrl = viewModel.getDirectDownloadUrl(file.id),
                     webPageUrl = viewModel.getWebPageUrl(file.id),
                     networkDownloadUrl = viewModel.getNetworkDownloadUrl(file.id),
-                    networkWebPageUrl = viewModel.getNetworkWebPageUrl(file.id),
-                    cloudflareDownloadUrl = viewModel.getCloudflareDownloadUrl(file.id),
-                    cloudflareWebPageUrl = viewModel.getCloudflareWebPageUrl(file.id),
+                    networkWebPageUrl = viewModel.getMediaFireWebPageUrl(file.id),
                     onDismiss = viewModel::closeFileAction,
                     onDelete = viewModel::deleteFile,
                     onToggleFavorite = viewModel::toggleFavorite
                 )
             }
 
-            // Dedicated Chrome Auto-Download Dialog
+            // Dedicated MediaFire Chrome Auto-Download Dialog
             activeChromeLinkFile?.let { file ->
                 ChromeDownloadDialog(
                     file = file,
                     directDownloadUrl = viewModel.getDirectDownloadUrl(file.id),
                     networkDownloadUrl = viewModel.getNetworkDownloadUrl(file.id),
-                    cloudflareDownloadUrl = viewModel.getCloudflareDownloadUrl(file.id),
+                    networkWebPageUrl = viewModel.getMediaFireWebPageUrl(file.id),
                     onDismiss = viewModel::closeChromeLinkDialog
-                )
-            }
-
-            // Cloudflare Tunnel Settings & Ingress Manager Dialog
-            if (showCloudflareDialog) {
-                CloudflareTunnelDialog(
-                    currentDomain = cloudflareDomain,
-                    isEnabled = isCloudflareEnabled,
-                    localPort = serverInfo.port,
-                    onDismiss = viewModel::closeCloudflareDialog,
-                    onSaveDomain = viewModel::setCloudflareDomain,
-                    onGenerateNewQuickTunnel = viewModel::generateNewQuickTunnel,
-                    onToggleEnabled = viewModel::toggleCloudflareTunnel
                 )
             }
 
@@ -158,13 +136,10 @@ fun CloudFireApp(viewModel: MainViewModel) {
             if (showDeveloperConsole) {
                 DeveloperConsoleDialog(
                     user = currentUser,
-                    cloudflareDomain = cloudflareDomain,
                     onDismiss = viewModel::closeDeveloperConsole,
                     onCreateTestFile = viewModel::createDeveloperTestFile,
                     onDeleteAllFiles = viewModel::deleteAllFiles,
-                    onSeedStarterFiles = viewModel::seedStarterFiles,
-                    onOpenCloudflareSettings = viewModel::openCloudflareDialog,
-                    onGenerateNewQuickTunnel = viewModel::generateNewQuickTunnel
+                    onSeedStarterFiles = viewModel::seedStarterFiles
                 )
             }
         }

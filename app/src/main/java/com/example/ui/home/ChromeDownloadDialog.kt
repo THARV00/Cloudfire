@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -46,21 +46,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CloudFile
 import com.example.ui.theme.CloudFireBlue
-import com.example.ui.theme.CloudflareNavy
-import com.example.ui.theme.CloudflareOrange
-import com.example.ui.theme.CloudflareOrangeDark
-import com.example.ui.theme.CloudflareOrangeLight
+import com.example.ui.theme.CloudFireCyan
 
 @Composable
 fun ChromeDownloadDialog(
     file: CloudFile,
     directDownloadUrl: String,
     networkDownloadUrl: String = directDownloadUrl,
-    cloudflareDownloadUrl: String = networkDownloadUrl,
+    networkWebPageUrl: String = directDownloadUrl,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val effectiveUrl = cloudflareDownloadUrl.ifEmpty { networkDownloadUrl }
+    val effectiveMediaFireUrl = networkWebPageUrl.ifEmpty { networkDownloadUrl }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -77,32 +74,27 @@ fun ChromeDownloadDialog(
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                listOf(CloudflareNavy, CloudflareOrange)
+                                listOf(CloudFireBlue, CloudFireCyan)
                             )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Cloud,
-                        contentDescription = "Cloudflare",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Text("🔥", fontSize = 22.sp)
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Cloudflare Tunnel",
+                            text = "MediaFire Link",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CloudflareNavy
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Text(
-                        text = "Global HTTPS Chrome Download Link",
+                        text = "Web Landing Page & Auto-Download",
                         fontSize = 11.sp,
-                        color = CloudflareOrangeDark,
+                        color = CloudFireBlue,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -125,22 +117,22 @@ fun ChromeDownloadDialog(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
-                // Cloudflare Info callout
+                // Info callout
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = CloudflareOrangeLight)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF3FF))
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Text("🌩️", fontSize = 16.sp, modifier = Modifier.padding(top = 1.dp))
+                        Text("🚀", fontSize = 16.sp, modifier = Modifier.padding(top = 1.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Open or paste this Cloudflare Tunnel link into Chrome on ANY device anywhere in the world. Download begins automatically with full SSL protection!",
+                            text = "Open in Chrome, Edge, Safari, or mobile browser to view the signature MediaFire landing page. Chrome will automatically begin the download!",
                             fontSize = 12.sp,
-                            color = Color(0xFF4A3E56),
+                            color = Color(0xFF1E3A8A),
                             lineHeight = 16.sp
                         )
                     }
@@ -149,10 +141,10 @@ fun ChromeDownloadDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Cloudflare Tunnel URL:",
+                    text = "MediaFire Link URL:",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = CloudflareNavy
+                    color = Color.DarkGray
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -162,14 +154,14 @@ fun ChromeDownloadDialog(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.5.dp, CloudflareOrange.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                        .border(1.2.dp, CloudFireBlue.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
                 ) {
                     Text(
-                        text = effectiveUrl,
+                        text = effectiveMediaFireUrl,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.SemiBold,
-                        color = CloudflareOrangeDark,
+                        color = CloudFireBlue,
                         modifier = Modifier.padding(12.dp)
                     )
                 }
@@ -178,11 +170,11 @@ fun ChromeDownloadDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    openInChrome(context, effectiveUrl)
+                    openInBrowser(context, effectiveMediaFireUrl)
                 },
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CloudflareOrange),
-                modifier = Modifier.testTag("btn_dialog_open_chrome")
+                colors = ButtonDefaults.buttonColors(containerColor = CloudFireBlue),
+                modifier = Modifier.testTag("btn_dialog_open_mediafire")
             ) {
                 Icon(
                     Icons.Default.OpenInBrowser,
@@ -190,14 +182,14 @@ fun ChromeDownloadDialog(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Open in Chrome", fontWeight = FontWeight.Bold)
+                Text("Open in MediaFire", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
-                        shareLink(context, file.fileName, effectiveUrl)
+                        shareLink(context, file.fileName, effectiveMediaFireUrl)
                     },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.testTag("btn_dialog_share_link")
@@ -213,7 +205,7 @@ fun ChromeDownloadDialog(
 
                 FilledTonalButton(
                     onClick = {
-                        copyToClipboard(context, effectiveUrl, "Cloudflare Tunnel download link copied!")
+                        copyToClipboard(context, effectiveMediaFireUrl, "MediaFire link copied to clipboard!")
                     },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.testTag("btn_dialog_copy_link")
@@ -230,4 +222,5 @@ fun ChromeDownloadDialog(
         }
     )
 }
+
 

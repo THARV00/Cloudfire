@@ -292,9 +292,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             result.onSuccess { file ->
-                val cfLink = LocalFileServer.getCloudflareDownloadUrl(file.id)
-                _uploadStatus.value = UploadStatus.Completed(file, cfLink)
-                _toastEvent.emit("File uploaded! Cloudflare Tunnel link generated.")
+                val mediaFireLink = LocalFileServer.getNetworkWebPageUrl(file.id)
+                _uploadStatus.value = UploadStatus.Completed(file, mediaFireLink)
+                _toastEvent.emit("File uploaded! MediaFire download link ready.")
             }.onFailure { error ->
                 _uploadStatus.value = UploadStatus.Error(error.message ?: "Upload failed")
             }
@@ -316,7 +316,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cloudflareDomain.value = updated
         _serverInfo.value = _serverInfo.value.copy(cloudflareDomain = updated)
         viewModelScope.launch {
-            _toastEvent.emit("Cloudflare Tunnel updated: $updated")
+            _toastEvent.emit("Server domain updated: $updated")
         }
     }
 
@@ -326,7 +326,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _cloudflareDomain.value = newDomain
         _serverInfo.value = _serverInfo.value.copy(cloudflareDomain = newDomain)
         viewModelScope.launch {
-            _toastEvent.emit("Generated new TryCloudflare Tunnel: $newDomain")
+            _toastEvent.emit("Generated new tunnel: $newDomain")
         }
     }
 
@@ -336,17 +336,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isCloudflareEnabled.value = enabled
         _serverInfo.value = _serverInfo.value.copy(isCloudflareActive = enabled)
         viewModelScope.launch {
-            val msg = if (enabled) "Cloudflare Tunnel active (HTTPS worldwide)" else "Local Wi-Fi mode only"
+            val msg = if (enabled) "External network active" else "Local Wi-Fi mode only"
             _toastEvent.emit(msg)
         }
     }
 
+    fun getMediaFireDownloadUrl(fileId: String): String {
+        return LocalFileServer.getMediaFireDownloadUrl(fileId)
+    }
+
+    fun getMediaFireWebPageUrl(fileId: String): String {
+        return LocalFileServer.getMediaFireWebPageUrl(fileId)
+    }
+
     fun getCloudflareDownloadUrl(fileId: String): String {
-        return LocalFileServer.getCloudflareDownloadUrl(fileId)
+        return LocalFileServer.getMediaFireDownloadUrl(fileId)
     }
 
     fun getCloudflareWebPageUrl(fileId: String): String {
-        return LocalFileServer.getCloudflareWebPageUrl(fileId)
+        return LocalFileServer.getMediaFireWebPageUrl(fileId)
     }
 
     fun dismissUpload() {
